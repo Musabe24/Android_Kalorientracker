@@ -71,20 +71,26 @@ android {
 
 }
 
-val isReleaseTaskRequested = gradle.startParameter.taskNames.any { taskName ->
-    taskName.contains("release", ignoreCase = true)
+val validateReleaseSigning = tasks.register("validateReleaseSigning") {
+    doLast {
+        if (!hasCompleteReleaseSigning) {
+            val missingProperties = releaseSigningProperties
+                .filterValues { it == null }
+                .keys
+                .sorted()
+                .joinToString()
+
+            throw GradleException(
+                "Release signing is required for release tasks. Missing properties: $missingProperties"
+            )
+        }
+    }
 }
 
-if (isReleaseTaskRequested && !hasCompleteReleaseSigning) {
-    val missingProperties = releaseSigningProperties
-        .filterValues { it == null }
-        .keys
-        .sorted()
-        .joinToString()
-
-    throw GradleException(
-        "Release signing is required for release tasks. Missing properties: $missingProperties"
-    )
+tasks.configureEach {
+    if (name != "validateReleaseSigning" && name.contains("Release", ignoreCase = true)) {
+        dependsOn(validateReleaseSigning)
+    }
 }
 
 dependencies {
