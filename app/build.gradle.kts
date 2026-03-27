@@ -15,6 +15,7 @@ val releaseSigningProperties = mapOf(
     "releaseKeyPassword" to project.readStringProperty("releaseKeyPassword")
 )
 val hasCompleteReleaseSigning = releaseSigningProperties.values.all { it != null }
+val requireReleaseSigning = project.readStringProperty("requireReleaseSigning")?.toBooleanStrictOrNull() == true
 
 android {
     namespace = "com.example.kalorientracker"
@@ -73,7 +74,7 @@ android {
 
 val validateReleaseSigning = tasks.register("validateReleaseSigning") {
     doLast {
-        if (!hasCompleteReleaseSigning) {
+        if (requireReleaseSigning && !hasCompleteReleaseSigning) {
             val missingProperties = releaseSigningProperties
                 .filterValues { it == null }
                 .keys

@@ -120,6 +120,7 @@ jobs:
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
           ./gradlew assembleRelease \
+            -PrequireReleaseSigning=true \
             -PreleaseKeystoreFile="$RUNNER_TEMP/release.keystore" \
             -PreleaseKeystorePassword="$RELEASE_KEYSTORE_PASSWORD" \
             -PreleaseKeyAlias="$RELEASE_KEY_ALIAS" \
