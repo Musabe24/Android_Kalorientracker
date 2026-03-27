@@ -3,6 +3,20 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+fun Project.readStringProperty(name: String): String? {
+    return findProperty(name)?.toString()?.takeIf { it.isNotBlank() }
+        ?: System.getenv(name)?.takeIf { it.isNotBlank() }
+}
+
+val releaseSigningProperties = mapOf(
+    "releaseKeystoreFile" to project.readStringProperty("releaseKeystoreFile"),
+    "releaseKeystorePassword" to project.readStringProperty("releaseKeystorePassword"),
+    "releaseKeyAlias" to project.readStringProperty("releaseKeyAlias"),
+    "releaseKeyPassword" to project.readStringProperty("releaseKeyPassword")
+)
+val hasCompleteReleaseSigning = releaseSigningProperties.values.all { it != null }
+val requireReleaseSigning = project.readStringProperty("requireReleaseSigning")?.toBooleanStrictOrNull() == true
+
 android {
     namespace = "com.example.kalorientracker"
     compileSdk {
@@ -21,6 +35,19 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (hasCompleteReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseSigningProperties.getValue("releaseKeystoreFile")!!)
+                storePassword = releaseSigningProperties.getValue("releaseKeystorePassword")
+                keyAlias = releaseSigningProperties.getValue("releaseKeyAlias")
+                keyPassword = releaseSigningProperties.getValue("releaseKeyPassword")
+                enableV1Signing = true
+                enableV2Signing = true
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -28,8 +55,13 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+
+            if (hasCompleteReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -38,6 +70,28 @@ android {
         compose = true
     }
 
+}
+
+val validateReleaseSigning = tasks.register("validateReleaseSigning") {
+    doLast {
+        if (requireReleaseSigning && !hasCompleteReleaseSigning) {
+            val missingProperties = releaseSigningProperties
+                .filterValues { it == null }
+                .keys
+                .sorted()
+                .joinToString()
+
+            throw GradleException(
+                "Release signing is required for release tasks. Missing properties: $missingProperties"
+            )
+        }
+    }
+}
+
+tasks.configureEach {
+    if (name != "validateReleaseSigning" && name.contains("Release", ignoreCase = true)) {
+        dependsOn(validateReleaseSigning)
+    }
 }
 
 dependencies {
