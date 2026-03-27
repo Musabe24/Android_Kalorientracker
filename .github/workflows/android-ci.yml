@@ -85,10 +85,62 @@ jobs:
       - name: Grant execute permission for Gradle wrapper
         run: chmod +x ./gradlew
 
+      - name: Validate release signing secrets
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          missing_vars=()
+          for var in RELEASE_KEYSTORE_BASE64 RELEASE_KEYSTORE_PASSWORD RELEASE_KEY_ALIAS RELEASE_KEY_PASSWORD; do
+            if [ -z "${!var}" ]; then
+              missing_vars+=("$var")
+            fi
+          done
+
+          if [ ${#missing_vars[@]} -gt 0 ]; then
+            echo "Missing required signing secrets: ${missing_vars[*]}"
+            exit 1
+          fi
+
+      - name: Create keystore file
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
+
       - name: Build release APK
-        run: ./gradlew assembleRelease --stacktrace --no-daemon
+        env:
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleRelease \
+            -PreleaseKeystoreFile="$RUNNER_TEMP/release.keystore" \
+            -PreleaseKeystorePassword="$RELEASE_KEYSTORE_PASSWORD" \
+            -PreleaseKeyAlias="$RELEASE_KEY_ALIAS" \
+            -PreleaseKeyPassword="$RELEASE_KEY_PASSWORD" \
+            --stacktrace \
+            --no-daemon
+
+      - name: Verify signed release APK exists
+        run: |
+          set -euo pipefail
+
+          signed_apk="app/build/outputs/apk/release/app-release.apk"
+          unsigned_apk="app/build/outputs/apk/release/app-release-unsigned.apk"
+
+          test -f "$signed_apk"
+          if [ -f "$unsigned_apk" ]; then
+            echo "Unexpected unsigned APK found: $unsigned_apk"
+            exit 1
+          fi
 
       - name: Publish GitHub release with APK
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/release/*.apk
+          files: app/build/outputs/apk/release/app-release.apk
