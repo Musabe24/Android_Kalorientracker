@@ -86,6 +86,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Validate release signing secrets
+        id: signing_secrets
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
@@ -102,11 +103,15 @@ jobs:
           done
 
           if [ ${#missing_vars[@]} -gt 0 ]; then
-            echo "Missing required signing secrets: ${missing_vars[*]}"
-            exit 1
+            echo "Missing release signing secrets: ${missing_vars[*]}"
+            echo "has_secrets=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
+          echo "has_secrets=true" >> "$GITHUB_OUTPUT"
+
       - name: Create keystore file
+        if: steps.signing_secrets.outputs.has_secrets == 'true'
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
         run: |
@@ -114,6 +119,7 @@ jobs:
           echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
 
       - name: Build release APK
+        if: steps.signing_secrets.outputs.has_secrets == 'true'
         env:
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
@@ -129,6 +135,7 @@ jobs:
             --no-daemon
 
       - name: Verify signed release APK exists
+        if: steps.signing_secrets.outputs.has_secrets == 'true'
         run: |
           set -euo pipefail
 
@@ -142,6 +149,11 @@ jobs:
           fi
 
       - name: Publish GitHub release with APK
+        if: steps.signing_secrets.outputs.has_secrets == 'true'
         uses: softprops/action-gh-release@v2
         with:
           files: app/build/outputs/apk/release/app-release.apk
+
+      - name: Skip release when signing secrets are unavailable
+        if: steps.signing_secrets.outputs.has_secrets != 'true'
+        run: echo "Skipping release APK build because signing secrets are not configured."
