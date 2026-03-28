@@ -1,15 +1,13 @@
 package com.example.kalorientracker.domain.calorie
 
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import com.example.kalorientracker.testutil.InMemoryGoalTargetRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class UpdateGoalTargetUseCaseTest {
-    private val repository = FakeGoalTargetRepository()
+    private val repository = InMemoryGoalTargetRepository()
     private val useCase = UpdateGoalTargetUseCase(repository)
 
     @Test
@@ -37,20 +35,5 @@ class UpdateGoalTargetUseCaseTest {
             result
         )
         assertEquals(CalculateGoalProgressUseCase.DEFAULT_TARGET_CALORIES, repository.getTargetCalories())
-    }
-}
-
-private class FakeGoalTargetRepository(
-    private var targetCalories: Int = CalculateGoalProgressUseCase.DEFAULT_TARGET_CALORIES
-) : GoalTargetRepository {
-    private val targetFlow = MutableStateFlow(targetCalories)
-
-    override fun observeTargetCalories(): Flow<Int> = targetFlow.asStateFlow()
-
-    override suspend fun getTargetCalories(): Int = targetCalories
-
-    override suspend fun setTargetCalories(targetCalories: Int) {
-        this.targetCalories = targetCalories
-        targetFlow.value = targetCalories
     }
 }

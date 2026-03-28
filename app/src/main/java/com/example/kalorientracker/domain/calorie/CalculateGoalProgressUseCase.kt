@@ -50,12 +50,3 @@ class CalculateGoalProgressUseCase {
         const val DEFAULT_TARGET_CALORIES = 2200
     }
 }
-
-data class GoalProgressInsights(
-    val targetCalories: Int,
-    val remainingCalories: Int,
-    val progressRatio: Float,
-    val averageNetCalories: Int,
-    val targetHitDays: Int,
-    val consistencyStreak: Int
-)

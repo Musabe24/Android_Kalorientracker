@@ -1,10 +1,7 @@
 package com.example.kalorientracker.domain.calorie
 
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
+import com.example.kalorientracker.testutil.InMemoryCalorieEntryRepository
+import com.example.kalorientracker.testutil.fixedTestClock
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -33,7 +30,7 @@ class LoadWeeklyCalorieTrendUseCaseTest {
         val useCase = LoadWeeklyCalorieTrendUseCase(
             repository = repository,
             dailyCalorieCalculator = DailyCalorieCalculator(),
-            clock = Clock.fixed(Instant.parse("2026-03-28T10:15:30Z"), ZoneOffset.UTC)
+            clock = fixedTestClock()
         )
 
         val trend = useCase()
@@ -47,27 +44,5 @@ class LoadWeeklyCalorieTrendUseCaseTest {
     }
 }
 
-private class WeeklyTrendRepository(
-    private val entries: List<CalorieEntry>
-) : CalorieEntryRepository {
-    override fun observeEntries(): Flow<List<CalorieEntry>> = flowOf(entries)
-
-    override suspend fun getEntries(): List<CalorieEntry> = entries
-
-    override suspend fun getEntriesBetween(
-        startEpochDayInclusive: Long,
-        endEpochDayInclusive: Long
-    ): List<CalorieEntry> {
-        return entries.filter {
-            it.recordedOnEpochDay in startEpochDayInclusive..endEpochDayInclusive
-        }
-    }
-
-    override suspend fun saveEntry(entry: CalorieEntry) {
-        throw UnsupportedOperationException("Not needed for this test.")
-    }
-
-    override suspend fun deleteEntry(entryId: String) {
-        throw UnsupportedOperationException("Not needed for this test.")
-    }
-}
+private class WeeklyTrendRepository(entries: List<CalorieEntry>) :
+    InMemoryCalorieEntryRepository(entries)

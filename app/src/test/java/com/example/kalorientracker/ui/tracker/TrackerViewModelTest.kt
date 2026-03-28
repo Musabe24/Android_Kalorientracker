@@ -18,14 +18,11 @@ import com.example.kalorientracker.domain.calorie.LoadGoalTargetUseCase
 import com.example.kalorientracker.domain.calorie.LoadWeeklyCalorieTrendUseCase
 import com.example.kalorientracker.domain.calorie.SaveCalorieEntryUseCase
 import com.example.kalorientracker.domain.calorie.UpdateGoalTargetUseCase
+import com.example.kalorientracker.testutil.InMemoryCalorieEntryRepository
+import com.example.kalorientracker.testutil.InMemoryGoalTargetRepository
 import com.example.kalorientracker.testutil.MainDispatcherRule
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
+import com.example.kalorientracker.testutil.fixedTestClock
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -112,7 +109,7 @@ class TrackerViewModelTest {
     @Test
     fun `start editing populates form and save updates existing entry`() = runTest {
         val repository = InMemoryCalorieEntryRepository(
-            entries = mutableListOf(
+            initialEntries = listOf(
                 CalorieEntry(
                     id = "entry-1",
                     name = "Breakfast",
@@ -145,7 +142,7 @@ class TrackerViewModelTest {
     @Test
     fun `delete entry removes it from overview and clears active edit state`() = runTest {
         val repository = InMemoryCalorieEntryRepository(
-            entries = mutableListOf(
+            initialEntries = listOf(
                 CalorieEntry(
                     id = "entry-1",
                     amount = 220,
@@ -177,7 +174,7 @@ class TrackerViewModelTest {
             source = CalorieEntrySource.MANUAL,
             recordedOnEpochDay = 20540L
         )
-        val repository = InMemoryCalorieEntryRepository(entries = mutableListOf(entry))
+        val repository = InMemoryCalorieEntryRepository(initialEntries = listOf(entry))
         val viewModel = createViewModel(repository)
 
         advanceUntilIdle()
@@ -197,7 +194,7 @@ class TrackerViewModelTest {
             source = CalorieEntrySource.MANUAL,
             recordedOnEpochDay = 20540L
         )
-        val repository = InMemoryCalorieEntryRepository(entries = mutableListOf(entry))
+        val repository = InMemoryCalorieEntryRepository(initialEntries = listOf(entry))
         val viewModel = createViewModel(repository)
 
         advanceUntilIdle()
@@ -212,7 +209,7 @@ class TrackerViewModelTest {
     @Test
     fun `select history filter narrows visible history days`() = runTest {
         val repository = InMemoryCalorieEntryRepository(
-            entries = mutableListOf(
+            initialEntries = listOf(
                 CalorieEntry(
                     id = "today-entry",
                     amount = 300,
@@ -245,7 +242,7 @@ class TrackerViewModelTest {
     @Test
     fun `select trend range expands the visible timeline`() = runTest {
         val repository = InMemoryCalorieEntryRepository(
-            entries = mutableListOf(
+            initialEntries = listOf(
                 CalorieEntry(
                     id = "entry-1",
                     amount = 120,
@@ -298,7 +295,7 @@ class TrackerViewModelTest {
     @Test
     fun `trend window navigation can move to earlier and later weeks`() = runTest {
         val repository = InMemoryCalorieEntryRepository(
-            entries = mutableListOf(
+            initialEntries = listOf(
                 CalorieEntry(
                     id = "entry-1",
                     amount = 120,
@@ -399,7 +396,7 @@ class TrackerViewModelTest {
             saveCalorieEntryUseCase = SaveCalorieEntryUseCase(
                 repository = repository,
                 inputValidator = CalorieInputValidator(),
-                clock = Clock.fixed(Instant.parse("2026-03-28T10:15:30Z"), ZoneOffset.UTC)
+                clock = fixedTestClock()
             ),
             deleteCalorieEntryUseCase = DeleteCalorieEntryUseCase(
                 repository = repository
@@ -411,17 +408,17 @@ class TrackerViewModelTest {
             loadCalorieTimelineTrendUseCase = LoadCalorieTimelineTrendUseCase(
                 repository = repository,
                 dailyCalorieCalculator = DailyCalorieCalculator(),
-                clock = Clock.fixed(Instant.parse("2026-03-28T10:15:30Z"), ZoneOffset.UTC)
+                clock = fixedTestClock()
             ),
             loadCalorieOverviewUseCase = LoadCalorieOverviewUseCase(
                 repository = repository,
                 dailyCalorieCalculator = DailyCalorieCalculator(),
-                clock = Clock.fixed(Instant.parse("2026-03-28T10:15:30Z"), ZoneOffset.UTC)
+                clock = fixedTestClock()
             ),
             loadWeeklyCalorieTrendUseCase = LoadWeeklyCalorieTrendUseCase(
                 repository = repository,
                 dailyCalorieCalculator = DailyCalorieCalculator(),
-                clock = Clock.fixed(Instant.parse("2026-03-28T10:15:30Z"), ZoneOffset.UTC)
+                clock = fixedTestClock()
             ),
             loadGoalTargetUseCase = LoadGoalTargetUseCase(
                 repository = goalTargetRepository
@@ -430,56 +427,7 @@ class TrackerViewModelTest {
                 repository = goalTargetRepository
             ),
             calculateGoalProgressUseCase = CalculateGoalProgressUseCase(),
-            clock = Clock.fixed(Instant.parse("2026-03-28T10:15:30Z"), ZoneOffset.UTC)
+            clock = fixedTestClock()
         )
-    }
-}
-
-private class InMemoryGoalTargetRepository(
-    private var targetCalories: Int = CalculateGoalProgressUseCase.DEFAULT_TARGET_CALORIES
-) : GoalTargetRepository {
-    private val targetFlow = MutableStateFlow(targetCalories)
-
-    override fun observeTargetCalories(): Flow<Int> = targetFlow.asStateFlow()
-
-    override suspend fun getTargetCalories(): Int = targetCalories
-
-    override suspend fun setTargetCalories(targetCalories: Int) {
-        this.targetCalories = targetCalories
-        targetFlow.value = targetCalories
-    }
-}
-
-private class InMemoryCalorieEntryRepository(
-    private val entries: MutableList<CalorieEntry> = mutableListOf()
-) : CalorieEntryRepository {
-    private val entriesFlow = MutableStateFlow(entries.toList())
-
-    override fun observeEntries(): Flow<List<CalorieEntry>> = entriesFlow.asStateFlow()
-
-    override suspend fun getEntries(): List<CalorieEntry> = entries.toList()
-
-    override suspend fun getEntriesBetween(
-        startEpochDayInclusive: Long,
-        endEpochDayInclusive: Long
-    ): List<CalorieEntry> {
-        return entries.filter {
-            it.recordedOnEpochDay in startEpochDayInclusive..endEpochDayInclusive
-        }
-    }
-
-    override suspend fun saveEntry(entry: CalorieEntry) {
-        val existingIndex = entries.indexOfFirst { it.id == entry.id }
-        if (existingIndex >= 0) {
-            entries[existingIndex] = entry
-        } else {
-            entries += entry
-        }
-        entriesFlow.value = entries.toList()
-    }
-
-    override suspend fun deleteEntry(entryId: String) {
-        entries.removeAll { it.id == entryId }
-        entriesFlow.value = entries.toList()
     }
 }

@@ -24,8 +24,3 @@ class LoadCalorieOverviewUseCase(
         return CalorieOverview(entries = todayEntries, summary = summary)
     }
 }
-
-data class CalorieOverview(
-    val entries: List<CalorieEntry>,
-    val summary: DailyCalorieSummary
-)

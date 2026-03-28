@@ -44,9 +44,3 @@ class SaveCalorieEntryUseCase(
         }
     }
 }
-
-sealed interface SaveCalorieEntryResult {
-    data object Success : SaveCalorieEntryResult
-
-    data class ValidationError(val reason: CalorieInputValidationError) : SaveCalorieEntryResult
-}

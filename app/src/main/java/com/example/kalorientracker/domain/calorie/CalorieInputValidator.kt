@@ -25,14 +25,3 @@ class CalorieInputValidator {
         return ValidationResult.Valid(parsedCalories)
     }
 }
-
-enum class CalorieInputValidationError {
-    Blank,
-    NotWholeNumber,
-    NonPositive
-}
-
-sealed interface ValidationResult {
-    data class Valid(val calories: Int) : ValidationResult
-    data class Invalid(val reason: CalorieInputValidationError) : ValidationResult
-}

@@ -1,7 +1,6 @@
 package com.example.kalorientracker.domain.calorie
 
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
+import com.example.kalorientracker.testutil.InMemoryCalorieEntryRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -10,7 +9,7 @@ class LoadCalorieHistoryUseCaseTest {
     @Test
     fun `invoke groups entries by day in descending order`() = runTest {
         val repository = HistoryRepository(
-            entries = listOf(
+            initialEntries = listOf(
                 CalorieEntry(
                     id = "entry-1",
                     amount = 300,
@@ -50,27 +49,5 @@ class LoadCalorieHistoryUseCaseTest {
     }
 }
 
-private class HistoryRepository(
-    private val entries: List<CalorieEntry>
-) : CalorieEntryRepository {
-    override fun observeEntries(): Flow<List<CalorieEntry>> = flowOf(entries)
-
-    override suspend fun getEntries(): List<CalorieEntry> = entries
-
-    override suspend fun getEntriesBetween(
-        startEpochDayInclusive: Long,
-        endEpochDayInclusive: Long
-    ): List<CalorieEntry> {
-        return entries.filter {
-            it.recordedOnEpochDay in startEpochDayInclusive..endEpochDayInclusive
-        }
-    }
-
-    override suspend fun saveEntry(entry: CalorieEntry) {
-        throw UnsupportedOperationException("Not needed for this test.")
-    }
-
-    override suspend fun deleteEntry(entryId: String) {
-        throw UnsupportedOperationException("Not needed for this test.")
-    }
-}
+private class HistoryRepository(initialEntries: List<CalorieEntry>) :
+    InMemoryCalorieEntryRepository(initialEntries)

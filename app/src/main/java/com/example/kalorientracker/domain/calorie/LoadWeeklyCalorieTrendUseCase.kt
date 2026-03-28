@@ -47,10 +47,3 @@ class LoadWeeklyCalorieTrendUseCase(
         }
     }
 }
-
-data class DailyCalorieTrendPoint(
-    val epochDay: Long,
-    val totalIntake: Int,
-    val totalBurned: Int,
-    val netCalories: Int
-)
