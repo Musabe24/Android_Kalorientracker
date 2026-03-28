@@ -18,6 +18,7 @@ class CalorieEntryStorageCodecTest {
         val entries = listOf(
             CalorieEntry(
                 id = "entry-1",
+                name = "Chicken bowl",
                 amount = 300,
                 type = CalorieEntryType.INTAKE,
                 source = CalorieEntrySource.MEAL,
@@ -25,6 +26,7 @@ class CalorieEntryStorageCodecTest {
             ),
             CalorieEntry(
                 id = "entry-2",
+                name = "Intervals",
                 amount = 180,
                 type = CalorieEntryType.BURNED,
                 source = CalorieEntrySource.WATCH,
@@ -51,6 +53,16 @@ class CalorieEntryStorageCodecTest {
         assertEquals(CalorieEntrySource.MEAL, decodedEntries.single().source)
         assertEquals(20540L, decodedEntries.single().recordedOnEpochDay)
         assertTrue(decodedEntries.single().id.isNotBlank())
+    }
+
+    @Test
+    fun `decode accepts pre name five field entries`() {
+        val decodedEntries = codec.decode("entry-1|300|INTAKE|MEAL|19810")
+
+        assertEquals(1, decodedEntries.size)
+        assertEquals("", decodedEntries.single().name)
+        assertEquals(300, decodedEntries.single().amount)
+        assertEquals(19810L, decodedEntries.single().recordedOnEpochDay)
     }
 
     @Test(expected = IllegalStateException::class)

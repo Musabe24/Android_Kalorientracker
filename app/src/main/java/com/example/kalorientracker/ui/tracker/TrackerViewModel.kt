@@ -11,17 +11,22 @@ import com.example.kalorientracker.data.calorie.CalorieTrackerDatabase
 import com.example.kalorientracker.data.calorie.CalorieEntryStorageCodec
 import com.example.kalorientracker.data.calorie.LegacyCalorieEntryStore
 import com.example.kalorientracker.data.calorie.RoomCalorieEntryRepository
+import com.example.kalorientracker.data.calorie.RoomGoalTargetRepository
 import com.example.kalorientracker.domain.calorie.CalorieEntry
 import com.example.kalorientracker.domain.calorie.CalorieEntrySource
 import com.example.kalorientracker.domain.calorie.CalorieEntryType
+import com.example.kalorientracker.domain.calorie.CalculateGoalProgressUseCase
 import com.example.kalorientracker.domain.calorie.CalorieInputValidator
 import com.example.kalorientracker.domain.calorie.DailyCalorieCalculator
 import com.example.kalorientracker.domain.calorie.DeleteCalorieEntryUseCase
+import com.example.kalorientracker.domain.calorie.LoadGoalTargetUseCase
 import com.example.kalorientracker.domain.calorie.LoadCalorieHistoryUseCase
 import com.example.kalorientracker.domain.calorie.LoadCalorieOverviewUseCase
 import com.example.kalorientracker.domain.calorie.LoadWeeklyCalorieTrendUseCase
 import com.example.kalorientracker.domain.calorie.SaveCalorieEntryResult
 import com.example.kalorientracker.domain.calorie.SaveCalorieEntryUseCase
+import com.example.kalorientracker.domain.calorie.UpdateGoalTargetResult
+import com.example.kalorientracker.domain.calorie.UpdateGoalTargetUseCase
 import java.time.Clock
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,6 +41,9 @@ class TrackerViewModel(
     private val loadCalorieHistoryUseCase: LoadCalorieHistoryUseCase,
     private val loadCalorieOverviewUseCase: LoadCalorieOverviewUseCase,
     private val loadWeeklyCalorieTrendUseCase: LoadWeeklyCalorieTrendUseCase,
+    private val loadGoalTargetUseCase: LoadGoalTargetUseCase,
+    private val updateGoalTargetUseCase: UpdateGoalTargetUseCase,
+    private val calculateGoalProgressUseCase: CalculateGoalProgressUseCase,
     private val clock: Clock
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(
@@ -58,12 +66,81 @@ class TrackerViewModel(
         }
     }
 
+    fun onEntryNameChanged(value: String) {
+        _uiState.update { it.copy(entryNameInput = value) }
+    }
+
     fun onEntryTypeSelected(type: CalorieEntryType) {
-        _uiState.update { it.copy(selectedType = type) }
+        _uiState.update { currentState ->
+            currentState.copy(
+                selectedType = type,
+                selectedSource = if (currentState.selectedSource == CalorieEntrySource.MANUAL) {
+                    CalorieEntrySource.MANUAL
+                } else {
+                    inferredSourceForType(type)
+                }
+            )
+        }
     }
 
     fun onEntrySourceSelected(source: CalorieEntrySource) {
-        _uiState.update { it.copy(selectedSource = source) }
+        _uiState.update { currentState ->
+            currentState.copy(
+                selectedSource = source,
+                selectedType = inferredTypeForSource(source) ?: currentState.selectedType
+            )
+        }
+    }
+
+    fun startEditingGoalTarget() {
+        _uiState.update {
+            it.copy(
+                isEditingGoalTarget = true,
+                targetCaloriesInput = it.targetCalories.toString(),
+                goalTargetError = null
+            )
+        }
+    }
+
+    fun onGoalTargetInputChanged(value: String) {
+        _uiState.update {
+            it.copy(
+                targetCaloriesInput = value,
+                goalTargetError = null
+            )
+        }
+    }
+
+    fun cancelGoalTargetEditing() {
+        _uiState.update {
+            it.copy(
+                isEditingGoalTarget = false,
+                targetCaloriesInput = "",
+                goalTargetError = null
+            )
+        }
+    }
+
+    fun saveGoalTarget() {
+        val currentInput = _uiState.value.targetCaloriesInput
+        viewModelScope.launch {
+            when (val result = updateGoalTargetUseCase(currentInput)) {
+                is UpdateGoalTargetResult.ValidationError -> {
+                    _uiState.update { it.copy(goalTargetError = result.message) }
+                }
+
+                is UpdateGoalTargetResult.Success -> {
+                    refreshOverview()
+                    _uiState.update {
+                        it.copy(
+                            isEditingGoalTarget = false,
+                            targetCaloriesInput = "",
+                            goalTargetError = null
+                        )
+                    }
+                }
+            }
+        }
     }
 
     fun saveEntry() {
@@ -71,6 +148,7 @@ class TrackerViewModel(
         viewModelScope.launch {
             when (
                 val result = saveCalorieEntryUseCase(
+                    rawName = currentState.entryNameInput,
                     rawCalories = currentState.calorieInput,
                     entryType = currentState.selectedType,
                     entrySource = currentState.selectedSource,
@@ -93,12 +171,14 @@ class TrackerViewModel(
     fun startEditing(entry: CalorieEntry) {
         _uiState.update {
             it.copy(
+                entryNameInput = entry.name,
                 calorieInput = entry.amount.toString(),
                 selectedType = entry.type,
                 selectedSource = entry.source,
                 editingEntryId = entry.id,
                 editingEntryRecordedOnEpochDay = entry.recordedOnEpochDay,
-                inputError = null
+                inputError = null,
+                pendingDeleteEntry = null
             )
         }
     }
@@ -136,14 +216,22 @@ class TrackerViewModel(
     }
 
     private suspend fun refreshOverview() {
+        val targetCalories = loadGoalTargetUseCase()
         val historyDays = loadCalorieHistoryUseCase()
         val overview = loadCalorieOverviewUseCase()
         val weeklyTrend = loadWeeklyCalorieTrendUseCase()
+        val goalProgressInsights = calculateGoalProgressUseCase(
+            netCalories = overview.summary.netCalories,
+            weeklyTrend = weeklyTrend,
+            targetCalories = targetCalories
+        )
         _uiState.update {
             it.copy(
                 entries = overview.entries,
                 historyDays = historyDays,
                 weeklyTrend = weeklyTrend,
+                goalProgressInsights = goalProgressInsights,
+                targetCalories = targetCalories,
                 currentEpochDay = LocalDate.now(clock).toEpochDay(),
                 totalIntake = overview.summary.totalIntake,
                 totalBurned = overview.summary.totalBurned,
@@ -155,13 +243,29 @@ class TrackerViewModel(
     private fun clearEntryEditor() {
         _uiState.update {
             it.copy(
+                entryNameInput = "",
                 calorieInput = "",
                 selectedType = CalorieEntryType.INTAKE,
-                selectedSource = CalorieEntrySource.MANUAL,
+                selectedSource = CalorieEntrySource.MEAL,
                 editingEntryId = null,
                 editingEntryRecordedOnEpochDay = null,
                 inputError = null
             )
+        }
+    }
+
+    private fun inferredTypeForSource(source: CalorieEntrySource): CalorieEntryType? {
+        return when (source) {
+            CalorieEntrySource.MEAL -> CalorieEntryType.INTAKE
+            CalorieEntrySource.WATCH -> CalorieEntryType.BURNED
+            CalorieEntrySource.MANUAL -> null
+        }
+    }
+
+    private fun inferredSourceForType(type: CalorieEntryType): CalorieEntrySource {
+        return when (type) {
+            CalorieEntryType.INTAKE -> CalorieEntrySource.MEAL
+            CalorieEntryType.BURNED -> CalorieEntrySource.WATCH
         }
     }
 
@@ -172,6 +276,9 @@ class TrackerViewModel(
                     context.applicationContext,
                     CalorieTrackerDatabase::class.java,
                     TRACKER_DATABASE
+                ).addMigrations(
+                    CalorieTrackerDatabase.Migration1To2,
+                    CalorieTrackerDatabase.Migration2To3
                 ).build()
                 val repository = RoomCalorieEntryRepository(
                     calorieEntryDao = database.calorieEntryDao(),
@@ -182,6 +289,9 @@ class TrackerViewModel(
                         ),
                         storageCodec = CalorieEntryStorageCodec()
                     )
+                )
+                val goalTargetRepository = RoomGoalTargetRepository(
+                    goalSettingsDao = database.goalSettingsDao()
                 )
                 TrackerViewModel(
                     saveCalorieEntryUseCase = SaveCalorieEntryUseCase(
@@ -205,6 +315,13 @@ class TrackerViewModel(
                         dailyCalorieCalculator = DailyCalorieCalculator(),
                         clock = Clock.systemDefaultZone()
                     ),
+                    loadGoalTargetUseCase = LoadGoalTargetUseCase(
+                        repository = goalTargetRepository
+                    ),
+                    updateGoalTargetUseCase = UpdateGoalTargetUseCase(
+                        repository = goalTargetRepository
+                    ),
+                    calculateGoalProgressUseCase = CalculateGoalProgressUseCase(),
                     clock = Clock.systemDefaultZone()
                 )
             }

@@ -5,6 +5,7 @@ import com.example.kalorientracker.domain.calorie.CalorieEntrySource
 import com.example.kalorientracker.domain.calorie.CalorieEntryType
 import java.time.Clock
 import java.time.LocalDate
+import java.util.Base64
 import java.util.UUID
 
 /**
@@ -17,6 +18,7 @@ class CalorieEntryStorageCodec(
         return entries.joinToString(separator = ENTRY_SEPARATOR) { entry ->
             listOf(
                 entry.id,
+                encodeName(entry.name),
                 entry.amount.toString(),
                 entry.type.name,
                 entry.source.name,
@@ -42,6 +44,7 @@ class CalorieEntryStorageCodec(
         val fields = encodedEntry.split(FIELD_SEPARATOR)
         return when (fields.size) {
             FIELD_COUNT -> decodeCurrentEntry(fields)
+            PRE_NAME_FIELD_COUNT -> decodePreNameEntry(fields)
             LEGACY_FIELD_COUNT -> decodeLegacyEntry(encodedEntry, fields)
             else -> throw IllegalStateException("Stored calorie entries are malformed.")
         }
@@ -62,6 +65,30 @@ class CalorieEntryStorageCodec(
 
         return CalorieEntry(
             id = fields[ID_INDEX],
+            name = decodeName(fields[NAME_INDEX]),
+            amount = amount,
+            type = type,
+            source = source,
+            recordedOnEpochDay = recordedOnEpochDay
+        )
+    }
+
+    private fun decodePreNameEntry(fields: List<String>): CalorieEntry {
+        check(fields[PRE_NAME_ID_INDEX].isNotBlank()) {
+            "Stored calorie entries are malformed."
+        }
+
+        val amount = fields[PRE_NAME_AMOUNT_INDEX].toIntOrNull()
+            ?: throw IllegalStateException("Stored calorie entries are malformed.")
+
+        val type = parseEntryType(fields[PRE_NAME_TYPE_INDEX])
+        val source = parseEntrySource(fields[PRE_NAME_SOURCE_INDEX])
+        val recordedOnEpochDay = fields[PRE_NAME_RECORDED_ON_INDEX].toLongOrNull()
+            ?: throw IllegalStateException("Stored calorie entries are malformed.")
+
+        return CalorieEntry(
+            id = fields[PRE_NAME_ID_INDEX],
+            name = "",
             amount = amount,
             type = type,
             source = source,
@@ -75,6 +102,7 @@ class CalorieEntryStorageCodec(
 
         return CalorieEntry(
             id = UUID.nameUUIDFromBytes(encodedEntry.toByteArray()).toString(),
+            name = "",
             amount = amount,
             type = parseEntryType(fields[LEGACY_TYPE_INDEX]),
             source = parseEntrySource(fields[LEGACY_SOURCE_INDEX]),
@@ -82,16 +110,37 @@ class CalorieEntryStorageCodec(
         )
     }
 
+    private fun encodeName(name: String): String {
+        return Base64.getUrlEncoder()
+            .withoutPadding()
+            .encodeToString(name.toByteArray(Charsets.UTF_8))
+    }
+
+    private fun decodeName(encodedName: String): String {
+        return try {
+            String(Base64.getUrlDecoder().decode(encodedName), Charsets.UTF_8)
+        } catch (_: IllegalArgumentException) {
+            throw IllegalStateException("Stored calorie entries are malformed.")
+        }
+    }
+
     private companion object {
         const val ENTRY_SEPARATOR = "\n"
         const val FIELD_SEPARATOR = "|"
-        const val FIELD_COUNT = 5
+        const val FIELD_COUNT = 6
+        const val PRE_NAME_FIELD_COUNT = 5
         const val LEGACY_FIELD_COUNT = 3
         const val ID_INDEX = 0
-        const val AMOUNT_INDEX = 1
-        const val TYPE_INDEX = 2
-        const val SOURCE_INDEX = 3
-        const val RECORDED_ON_INDEX = 4
+        const val NAME_INDEX = 1
+        const val AMOUNT_INDEX = 2
+        const val TYPE_INDEX = 3
+        const val SOURCE_INDEX = 4
+        const val RECORDED_ON_INDEX = 5
+        const val PRE_NAME_ID_INDEX = 0
+        const val PRE_NAME_AMOUNT_INDEX = 1
+        const val PRE_NAME_TYPE_INDEX = 2
+        const val PRE_NAME_SOURCE_INDEX = 3
+        const val PRE_NAME_RECORDED_ON_INDEX = 4
         const val LEGACY_AMOUNT_INDEX = 0
         const val LEGACY_TYPE_INDEX = 1
         const val LEGACY_SOURCE_INDEX = 2

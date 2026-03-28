@@ -5,18 +5,25 @@ import com.example.kalorientracker.domain.calorie.CalorieEntrySource
 import com.example.kalorientracker.domain.calorie.CalorieEntryType
 import com.example.kalorientracker.domain.calorie.CalorieHistoryDay
 import com.example.kalorientracker.domain.calorie.DailyCalorieTrendPoint
+import com.example.kalorientracker.domain.calorie.GoalProgressInsights
 
 data class TrackerUiState(
     val dayNumber: Int = 1,
     val entries: List<CalorieEntry> = emptyList(),
     val historyDays: List<CalorieHistoryDay> = emptyList(),
     val weeklyTrend: List<DailyCalorieTrendPoint> = emptyList(),
+    val goalProgressInsights: GoalProgressInsights? = null,
+    val targetCalories: Int = 2200,
+    val targetCaloriesInput: String = "",
+    val goalTargetError: String? = null,
+    val isEditingGoalTarget: Boolean = false,
     val currentEpochDay: Long = 0,
     val selectedHistoryFilter: HistoryFilter = HistoryFilter.SevenDays,
     val pendingDeleteEntry: CalorieEntry? = null,
+    val entryNameInput: String = "",
     val calorieInput: String = "",
     val selectedType: CalorieEntryType = CalorieEntryType.INTAKE,
-    val selectedSource: CalorieEntrySource = CalorieEntrySource.MANUAL,
+    val selectedSource: CalorieEntrySource = CalorieEntrySource.MEAL,
     val editingEntryId: String? = null,
     val editingEntryRecordedOnEpochDay: Long? = null,
     val inputError: String? = null,
@@ -32,6 +39,9 @@ data class TrackerUiState(
 
     val isEditing: Boolean
         get() = editingEntryId != null
+
+    val showsManualTypePicker: Boolean
+        get() = selectedSource == CalorieEntrySource.MANUAL
 
     val filteredHistoryDays: List<CalorieHistoryDay>
         get() = when (selectedHistoryFilter) {

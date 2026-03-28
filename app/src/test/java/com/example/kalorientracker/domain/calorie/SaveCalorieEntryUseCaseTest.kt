@@ -19,6 +19,7 @@ class SaveCalorieEntryUseCaseTest {
     @Test
     fun `invoke persists valid intake entry with tracked day`() = runTest {
         val result = useCase(
+            rawName = "Overnight oats",
             rawCalories = "420",
             entryType = CalorieEntryType.INTAKE,
             entrySource = CalorieEntrySource.MEAL,
@@ -28,6 +29,7 @@ class SaveCalorieEntryUseCaseTest {
 
         assertEquals(SaveCalorieEntryResult.Success, result)
         assertEquals(1, repository.getEntries().size)
+        assertEquals("Overnight oats", repository.getEntries().single().name)
         assertEquals(420, repository.getEntries().single().amount)
         assertEquals(20540L, repository.getEntries().single().recordedOnEpochDay)
     }
@@ -37,6 +39,7 @@ class SaveCalorieEntryUseCaseTest {
         repository.saveEntry(
             CalorieEntry(
                 id = "entry-1",
+                name = "Lunch",
                 amount = 300,
                 type = CalorieEntryType.INTAKE,
                 source = CalorieEntrySource.MANUAL,
@@ -45,6 +48,7 @@ class SaveCalorieEntryUseCaseTest {
         )
 
         val result = useCase(
+            rawName = "Run session",
             rawCalories = "510",
             entryType = CalorieEntryType.BURNED,
             entrySource = CalorieEntrySource.WATCH,
@@ -57,6 +61,7 @@ class SaveCalorieEntryUseCaseTest {
             listOf(
                 CalorieEntry(
                     id = "entry-1",
+                    name = "Run session",
                     amount = 510,
                     type = CalorieEntryType.BURNED,
                     source = CalorieEntrySource.WATCH,
@@ -70,6 +75,7 @@ class SaveCalorieEntryUseCaseTest {
     @Test
     fun `invoke returns validation error for invalid input`() = runTest {
         val result = useCase(
+            rawName = "",
             rawCalories = "",
             entryType = CalorieEntryType.BURNED,
             entrySource = CalorieEntrySource.WATCH,

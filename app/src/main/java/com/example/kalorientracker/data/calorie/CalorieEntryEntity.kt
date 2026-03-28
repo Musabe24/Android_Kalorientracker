@@ -9,6 +9,7 @@ import com.example.kalorientracker.domain.calorie.CalorieEntryType
 @Entity(tableName = "calorie_entries")
 data class CalorieEntryEntity(
     @PrimaryKey val id: String,
+    val name: String,
     val amount: Int,
     val type: String,
     val source: String,
@@ -18,6 +19,7 @@ data class CalorieEntryEntity(
 fun CalorieEntryEntity.toDomain(): CalorieEntry {
     return CalorieEntry(
         id = id,
+        name = name,
         amount = amount,
         type = CalorieEntryType.valueOf(type),
         source = CalorieEntrySource.valueOf(source),
@@ -28,6 +30,7 @@ fun CalorieEntryEntity.toDomain(): CalorieEntry {
 fun CalorieEntry.toEntity(): CalorieEntryEntity {
     return CalorieEntryEntity(
         id = id,
+        name = name,
         amount = amount,
         type = type.name,
         source = source.name,

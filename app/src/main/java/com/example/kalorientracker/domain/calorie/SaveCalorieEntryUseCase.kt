@@ -15,6 +15,7 @@ class SaveCalorieEntryUseCase(
     private val clock: Clock
 ) {
     suspend operator fun invoke(
+        rawName: String,
         rawCalories: String,
         entryType: CalorieEntryType,
         entrySource: CalorieEntrySource,
@@ -31,6 +32,7 @@ class SaveCalorieEntryUseCase(
                 repository.saveEntry(
                     CalorieEntry(
                         id = editingEntryId ?: UUID.randomUUID().toString(),
+                        name = rawName.trim(),
                         amount = validationResult.calories,
                         type = entryType,
                         source = entrySource,

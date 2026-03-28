@@ -53,6 +53,7 @@ import com.example.kalorientracker.domain.calorie.CalorieEntrySource
 import com.example.kalorientracker.domain.calorie.CalorieEntryType
 import com.example.kalorientracker.domain.calorie.CalorieHistoryDay
 import com.example.kalorientracker.domain.calorie.DailyCalorieTrendPoint
+import com.example.kalorientracker.domain.calorie.GoalProgressInsights
 import com.example.kalorientracker.ui.theme.Coral
 import com.example.kalorientracker.ui.theme.CoralDeep
 import com.example.kalorientracker.ui.theme.Gold
@@ -61,8 +62,6 @@ import com.example.kalorientracker.ui.theme.InkMuted
 import com.example.kalorientracker.ui.theme.Olive
 import com.example.kalorientracker.ui.theme.OliveDeep
 import com.example.kalorientracker.ui.theme.Panel
-import com.example.kalorientracker.ui.theme.PanelStrong
-import com.example.kalorientracker.ui.theme.Paper
 import com.example.kalorientracker.ui.theme.Sky
 import com.example.kalorientracker.ui.theme.WhiteSmoke
 import com.example.kalorientracker.ui.theme.KalorientrackerTheme
@@ -70,8 +69,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.abs
-
-private const val DAILY_REFERENCE_TARGET = 2200
 
 object TrackerScreenTestTags {
     const val CALORIE_INPUT_FIELD = "calorie_input_field"
@@ -83,6 +80,7 @@ fun TrackerScreen(viewModel: TrackerViewModel, modifier: Modifier = Modifier) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     TrackerContent(
         uiState = uiState,
+        onEntryNameChanged = viewModel::onEntryNameChanged,
         onCalorieInputChanged = viewModel::onCalorieInputChanged,
         onTypeSelected = viewModel::onEntryTypeSelected,
         onSourceSelected = viewModel::onEntrySourceSelected,
@@ -93,6 +91,10 @@ fun TrackerScreen(viewModel: TrackerViewModel, modifier: Modifier = Modifier) {
         onHistoryFilterSelected = viewModel::selectHistoryFilter,
         onDismissDeleteDialog = viewModel::dismissDeleteEntry,
         onConfirmDeleteEntry = viewModel::confirmDeleteEntry,
+        onStartEditingGoalTarget = viewModel::startEditingGoalTarget,
+        onGoalTargetInputChanged = viewModel::onGoalTargetInputChanged,
+        onCancelGoalTargetEditing = viewModel::cancelGoalTargetEditing,
+        onSaveGoalTarget = viewModel::saveGoalTarget,
         modifier = modifier
     )
 }
@@ -100,6 +102,7 @@ fun TrackerScreen(viewModel: TrackerViewModel, modifier: Modifier = Modifier) {
 @Composable
 fun TrackerContent(
     uiState: TrackerUiState,
+    onEntryNameChanged: (String) -> Unit,
     onCalorieInputChanged: (String) -> Unit,
     onTypeSelected: (CalorieEntryType) -> Unit,
     onSourceSelected: (CalorieEntrySource) -> Unit,
@@ -110,8 +113,13 @@ fun TrackerContent(
     onHistoryFilterSelected: (HistoryFilter) -> Unit,
     onDismissDeleteDialog: () -> Unit,
     onConfirmDeleteEntry: () -> Unit,
+    onStartEditingGoalTarget: () -> Unit,
+    onGoalTargetInputChanged: (String) -> Unit,
+    onCancelGoalTargetEditing: () -> Unit,
+    onSaveGoalTarget: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val ambientSurface = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -119,7 +127,7 @@ fun TrackerContent(
                 brush = Brush.verticalGradient(
                     colors = listOf(
                         MaterialTheme.colorScheme.background,
-                        Panel.copy(alpha = 0.55f),
+                        ambientSurface,
                         MaterialTheme.colorScheme.background
                     )
                 )
@@ -149,6 +157,19 @@ fun TrackerContent(
                 QuickStatsRow(uiState = uiState)
             }
 
+            uiState.goalProgressInsights?.let { goalProgressInsights ->
+                item {
+                    GoalProgressSection(
+                        goalProgressInsights = goalProgressInsights,
+                        uiState = uiState,
+                        onStartEditingGoalTarget = onStartEditingGoalTarget,
+                        onGoalTargetInputChanged = onGoalTargetInputChanged,
+                        onCancelGoalTargetEditing = onCancelGoalTargetEditing,
+                        onSaveGoalTarget = onSaveGoalTarget
+                    )
+                }
+            }
+
             item {
                 WeeklyTrendSection(uiState = uiState)
             }
@@ -156,6 +177,7 @@ fun TrackerContent(
             item {
                 EntryComposerCard(
                     uiState = uiState,
+                    onEntryNameChanged = onEntryNameChanged,
                     onCalorieInputChanged = onCalorieInputChanged,
                     onTypeSelected = onTypeSelected,
                     onSourceSelected = onSourceSelected,
@@ -206,6 +228,27 @@ fun TrackerContent(
 }
 
 @Composable
+private fun trackerCardColor(): Color = MaterialTheme.colorScheme.surface
+
+@Composable
+private fun trackerPanelColor(alpha: Float = 1f): Color =
+    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha)
+
+@Composable
+private fun trackerOutlineColor(): Color =
+    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+
+@Composable
+private fun trackerPrimaryTextColor(): Color = MaterialTheme.colorScheme.onSurface
+
+@Composable
+private fun trackerSecondaryTextColor(): Color =
+    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.80f)
+
+@Composable
+private fun trackerEyebrowColor(): Color = MaterialTheme.colorScheme.primary
+
+@Composable
 private fun DecorativeBackdrop() {
     Box(
         modifier = Modifier
@@ -229,7 +272,7 @@ private fun DashboardHeader(uiState: TrackerUiState) {
         Text(
             text = stringResource(R.string.dashboard_eyebrow),
             style = MaterialTheme.typography.labelLarge,
-            color = CoralDeep
+            color = trackerEyebrowColor()
         )
         Text(
             text = stringResource(R.string.dashboard_title),
@@ -239,7 +282,7 @@ private fun DashboardHeader(uiState: TrackerUiState) {
         Text(
             text = stringResource(R.string.dashboard_subtitle, uiState.entries.size),
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = trackerSecondaryTextColor()
         )
     }
 }
@@ -247,12 +290,13 @@ private fun DashboardHeader(uiState: TrackerUiState) {
 @Composable
 private fun HeroSummaryCard(uiState: TrackerUiState) {
     val balanceAccent = if (uiState.netCalories >= 0) Olive else Coral
+    val targetCalories = uiState.goalProgressInsights?.targetCalories ?: uiState.targetCalories
     val balanceLabel = if (uiState.netCalories >= 0) {
         stringResource(R.string.balance_remaining_label)
     } else {
         stringResource(R.string.balance_surplus_label)
     }
-    val balanceValue = abs(DAILY_REFERENCE_TARGET - uiState.netCalories)
+    val balanceValue = abs(targetCalories - uiState.netCalories)
 
     Card(
         shape = RoundedCornerShape(32.dp),
@@ -289,7 +333,7 @@ private fun HeroSummaryCard(uiState: TrackerUiState) {
                 }
                 MetricPill(
                     label = stringResource(R.string.day_title_template, uiState.dayNumber),
-                    backgroundColor = WhiteSmoke.copy(alpha = 0.1f),
+                    backgroundColor = WhiteSmoke.copy(alpha = 0.14f),
                     contentColor = WhiteSmoke
                 )
             }
@@ -297,7 +341,7 @@ private fun HeroSummaryCard(uiState: TrackerUiState) {
             Text(
                 text = balanceLabel,
                 style = MaterialTheme.typography.titleMedium,
-                color = WhiteSmoke.copy(alpha = 0.8f)
+                color = WhiteSmoke.copy(alpha = 0.92f)
             )
 
             Row(
@@ -307,14 +351,14 @@ private fun HeroSummaryCard(uiState: TrackerUiState) {
             ) {
                 Column {
                     Text(
-                        text = stringResource(R.string.reference_target_label),
+                        text = stringResource(R.string.reference_target_label, targetCalories),
                         style = MaterialTheme.typography.bodySmall,
-                        color = WhiteSmoke.copy(alpha = 0.7f)
+                        color = WhiteSmoke.copy(alpha = 0.82f)
                     )
                     Text(
                         text = stringResource(R.string.entry_calories_template, balanceValue),
                         style = MaterialTheme.typography.titleLarge,
-                        color = balanceAccent
+                        color = WhiteSmoke
                     )
                 }
                 Box(
@@ -374,7 +418,7 @@ private fun DashboardStatCard(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Paper)
+        colors = CardDefaults.cardColors(containerColor = trackerCardColor())
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 16.dp),
@@ -389,14 +433,185 @@ private fun DashboardStatCard(
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = trackerSecondaryTextColor()
             )
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = trackerPrimaryTextColor()
             )
         }
+    }
+}
+
+@Composable
+private fun GoalProgressSection(
+    goalProgressInsights: GoalProgressInsights,
+    uiState: TrackerUiState,
+    onStartEditingGoalTarget: () -> Unit,
+    onGoalTargetInputChanged: (String) -> Unit,
+    onCancelGoalTargetEditing: () -> Unit,
+    onSaveGoalTarget: () -> Unit
+) {
+    val accent = if (goalProgressInsights.remainingCalories >= 0) Olive else Coral
+
+    Card(
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = trackerCardColor()),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            SectionTitle(
+                eyebrow = stringResource(R.string.goal_eyebrow),
+                title = stringResource(R.string.goal_title),
+                subtitle = stringResource(
+                    R.string.goal_subtitle,
+                    goalProgressInsights.targetCalories
+                )
+            )
+
+            if (uiState.isEditingGoalTarget) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    OutlinedTextField(
+                        value = uiState.targetCaloriesInput,
+                        onValueChange = onGoalTargetInputChanged,
+                        label = { Text(stringResource(R.string.goal_target_input_label)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        supportingText = {
+                            Text(uiState.goalTargetError ?: stringResource(R.string.goal_target_input_hint))
+                        },
+                        isError = uiState.goalTargetError != null,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        singleLine = true,
+                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier.weight(1f)
+                    )
+                    Button(
+                        onClick = onSaveGoalTarget,
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text(text = stringResource(R.string.goal_target_save_button))
+                    }
+                    TextButton(onClick = onCancelGoalTargetEditing) {
+                        Text(text = stringResource(R.string.goal_target_cancel_button))
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(
+                            R.string.goal_target_value,
+                            goalProgressInsights.targetCalories
+                        ),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    TextButton(onClick = onStartEditingGoalTarget) {
+                        Text(text = stringResource(R.string.goal_target_edit_button))
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(18.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Panel.copy(alpha = 0.8f))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(goalProgressInsights.progressRatio.coerceAtLeast(0.04f))
+                        .height(18.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(accent.copy(alpha = 0.75f), accent)
+                            )
+                        )
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                GoalMetric(
+                    label = stringResource(R.string.goal_remaining_label),
+                    value = stringResource(
+                        R.string.entry_calories_template,
+                        abs(goalProgressInsights.remainingCalories)
+                    ),
+                    accent = accent
+                )
+                GoalMetric(
+                    label = stringResource(R.string.goal_average_label),
+                    value = stringResource(
+                        R.string.entry_calories_template,
+                        goalProgressInsights.averageNetCalories
+                    ),
+                    accent = Sky
+                )
+                GoalMetric(
+                    label = stringResource(R.string.goal_hit_days_label),
+                    value = stringResource(
+                        R.string.goal_hit_days_value,
+                        goalProgressInsights.targetHitDays
+                    ),
+                    accent = Gold
+                )
+                GoalMetric(
+                    label = stringResource(R.string.goal_streak_label),
+                    value = stringResource(
+                        R.string.goal_streak_value,
+                        goalProgressInsights.consistencyStreak
+                    ),
+                    accent = CoralDeep
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GoalMetric(
+    label: String,
+    value: String,
+    accent: Color
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(accent)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            color = trackerPrimaryTextColor()
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = trackerSecondaryTextColor(),
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -404,7 +619,7 @@ private fun DashboardStatCard(
 private fun WeeklyTrendSection(uiState: TrackerUiState) {
     Card(
         shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = Paper),
+        colors = CardDefaults.cardColors(containerColor = trackerCardColor()),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -481,7 +696,7 @@ private fun WeeklyTrendBar(
         Text(
             text = stringResource(R.string.compact_calorie_template, net),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = trackerSecondaryTextColor(),
             textAlign = TextAlign.Center
         )
         Box(
@@ -489,7 +704,7 @@ private fun WeeklyTrendBar(
                 .fillMaxWidth()
                 .height(112.dp)
                 .clip(RoundedCornerShape(18.dp))
-                .background(Panel.copy(alpha = 0.75f)),
+                .background(trackerPanelColor(alpha = 0.85f)),
             contentAlignment = Alignment.BottomCenter
         ) {
             Box(
@@ -507,7 +722,7 @@ private fun WeeklyTrendBar(
         Text(
             text = LocalDate.ofEpochDay(point.epochDay).format(weekDayFormatter()),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = trackerPrimaryTextColor(),
             fontWeight = FontWeight.SemiBold
         )
     }
@@ -516,6 +731,7 @@ private fun WeeklyTrendBar(
 @Composable
 private fun EntryComposerCard(
     uiState: TrackerUiState,
+    onEntryNameChanged: (String) -> Unit,
     onCalorieInputChanged: (String) -> Unit,
     onTypeSelected: (CalorieEntryType) -> Unit,
     onSourceSelected: (CalorieEntrySource) -> Unit,
@@ -524,7 +740,7 @@ private fun EntryComposerCard(
 ) {
     Card(
         shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = PanelStrong.copy(alpha = 0.58f)),
+        colors = CardDefaults.cardColors(containerColor = trackerPanelColor(alpha = 0.82f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -544,13 +760,28 @@ private fun EntryComposerCard(
             )
 
             OutlinedTextField(
+                value = uiState.entryNameInput,
+                onValueChange = onEntryNameChanged,
+                label = { Text(stringResource(R.string.entry_name_input_label)) },
+                supportingText = {
+                    Text(stringResource(R.string.entry_name_input_hint))
+                },
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
+                shape = RoundedCornerShape(18.dp),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
                 value = uiState.calorieInput,
                 onValueChange = onCalorieInputChanged,
                 label = { Text(stringResource(R.string.calorie_input_label)) },
                 prefix = {
                     Text(
                         text = "kcal",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = trackerSecondaryTextColor()
                     )
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -560,28 +791,13 @@ private fun EntryComposerCard(
                     Text(supportingMessage)
                 },
                 singleLine = true,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
                 shape = RoundedCornerShape(18.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag(TrackerScreenTestTags.CALORIE_INPUT_FIELD)
-            )
-
-            SelectionGroup(
-                title = stringResource(R.string.entry_type_title),
-                options = listOf(
-                    SelectionOption(
-                        label = stringResource(R.string.entry_type_intake),
-                        selected = uiState.selectedType == CalorieEntryType.INTAKE,
-                        accent = Olive,
-                        onClick = { onTypeSelected(CalorieEntryType.INTAKE) }
-                    ),
-                    SelectionOption(
-                        label = stringResource(R.string.entry_type_burned),
-                        selected = uiState.selectedType == CalorieEntryType.BURNED,
-                        accent = Coral,
-                        onClick = { onTypeSelected(CalorieEntryType.BURNED) }
-                    )
-                )
             )
 
             SelectionGroup(
@@ -607,6 +823,26 @@ private fun EntryComposerCard(
                     )
                 )
             )
+
+            if (uiState.showsManualTypePicker) {
+                SelectionGroup(
+                    title = stringResource(R.string.entry_type_title),
+                    options = listOf(
+                        SelectionOption(
+                            label = stringResource(R.string.entry_type_intake),
+                            selected = uiState.selectedType == CalorieEntryType.INTAKE,
+                            accent = Olive,
+                            onClick = { onTypeSelected(CalorieEntryType.INTAKE) }
+                        ),
+                        SelectionOption(
+                            label = stringResource(R.string.entry_type_burned),
+                            selected = uiState.selectedType == CalorieEntryType.BURNED,
+                            accent = Coral,
+                            onClick = { onTypeSelected(CalorieEntryType.BURNED) }
+                        )
+                    )
+                )
+            }
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(
@@ -638,7 +874,7 @@ private fun EntryComposerCard(
                     ) {
                         Text(
                             text = stringResource(R.string.cancel_edit_button),
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = trackerPrimaryTextColor()
                         )
                     }
                 }
@@ -656,7 +892,7 @@ private fun SelectionGroup(
         Text(
             text = title,
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = trackerSecondaryTextColor()
         )
         Row(
             modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -671,9 +907,13 @@ private fun SelectionGroup(
 
 @Composable
 private fun SelectionChip(option: SelectionOption) {
-    val backgroundColor = if (option.selected) option.accent.copy(alpha = 0.18f) else Paper
-    val borderColor = if (option.selected) option.accent else PanelStrong
-    val textColor = if (option.selected) Ink else MaterialTheme.colorScheme.onSurfaceVariant
+    val backgroundColor = if (option.selected) {
+        option.accent.copy(alpha = 0.18f)
+    } else {
+        trackerCardColor()
+    }
+    val borderColor = if (option.selected) option.accent else trackerOutlineColor()
+    val textColor = MaterialTheme.colorScheme.onSurface
 
     Row(
         modifier = Modifier
@@ -709,17 +949,17 @@ private fun SectionTitle(
         Text(
             text = eyebrow,
             style = MaterialTheme.typography.labelLarge,
-            color = CoralDeep
+            color = trackerEyebrowColor()
         )
         Text(
             text = title,
             style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onSurface
+            color = trackerPrimaryTextColor()
         )
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = trackerSecondaryTextColor()
         )
     }
 }
@@ -736,7 +976,7 @@ private fun HistoryDayCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = Paper)
+        colors = CardDefaults.cardColors(containerColor = trackerCardColor())
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
@@ -758,12 +998,12 @@ private fun HistoryDayCard(
                         Text(
                             text = stringResource(R.string.history_day_index_template, index),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = trackerSecondaryTextColor()
                         )
                         Text(
                             text = LocalDate.ofEpochDay(historyDay.epochDay).format(historyDateFormatter()),
                             style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = trackerPrimaryTextColor()
                         )
                         Text(
                             text = stringResource(
@@ -773,7 +1013,7 @@ private fun HistoryDayCard(
                                 historyDay.totalBurned
                             ),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = trackerSecondaryTextColor()
                         )
                     }
                 }
@@ -781,13 +1021,13 @@ private fun HistoryDayCard(
                     MetricPill(
                         label = stringResource(R.string.net_short_label),
                         backgroundColor = accent.copy(alpha = 0.14f),
-                        contentColor = accent
+                        contentColor = trackerPrimaryTextColor()
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         text = stringResource(R.string.entry_calories_template, historyDay.netCalories),
                         style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = trackerPrimaryTextColor()
                     )
                 }
             }
@@ -817,7 +1057,7 @@ private fun HistoryEntryRow(
 
     Card(
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Panel.copy(alpha = 0.45f)),
+        colors = CardDefaults.cardColors(containerColor = trackerPanelColor(alpha = 0.72f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -838,28 +1078,21 @@ private fun HistoryEntryRow(
                     )
                     Column {
                         Text(
-                            text = stringResource(
-                                if (entry.type == CalorieEntryType.INTAKE) {
-                                    R.string.history_intake_entry_template
-                                } else {
-                                    R.string.history_burned_entry_template
-                                },
-                                index
-                            ),
+                            text = entryDisplayTitle(entry, index),
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = trackerPrimaryTextColor()
                         )
                         Text(
-                            text = sourceLabel(entry.source),
+                            text = entryDisplaySubtitle(entry),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = trackerSecondaryTextColor()
                         )
                     }
                 }
                 Text(
                     text = stringResource(R.string.entry_calories_template, entry.amount),
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = trackerPrimaryTextColor()
                 )
             }
 
@@ -868,7 +1101,7 @@ private fun HistoryEntryRow(
                     onClick = onEditEntryClicked,
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.onSurface
+                        contentColor = trackerPrimaryTextColor()
                     )
                 ) {
                     Text(text = stringResource(R.string.edit_entry_button))
@@ -877,7 +1110,7 @@ private fun HistoryEntryRow(
                     onClick = onDeleteEntryClicked,
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.onSurface
+                        contentColor = trackerPrimaryTextColor()
                     )
                 ) {
                     Text(text = stringResource(R.string.delete_entry_button))
@@ -900,11 +1133,7 @@ private fun DeleteEntryDialog(
             Text(
                 text = stringResource(
                     R.string.delete_dialog_message,
-                    if (entry.type == CalorieEntryType.INTAKE) {
-                        stringResource(R.string.entry_type_intake)
-                    } else {
-                        stringResource(R.string.entry_type_burned)
-                    },
+                    deleteEntryLabel(entry),
                     entry.amount
                 )
             )
@@ -932,6 +1161,7 @@ private fun HistorySectionPreviewDay(): List<CalorieHistoryDay> {
             entries = listOf(
                 CalorieEntry(
                     id = "meal-1",
+                    name = "Chicken bowl",
                     amount = 650,
                     type = CalorieEntryType.INTAKE,
                     source = CalorieEntrySource.MEAL,
@@ -939,6 +1169,7 @@ private fun HistorySectionPreviewDay(): List<CalorieHistoryDay> {
                 ),
                 CalorieEntry(
                     id = "burned-1",
+                    name = "Evening walk",
                     amount = 420,
                     type = CalorieEntryType.BURNED,
                     source = CalorieEntrySource.WATCH,
@@ -977,7 +1208,7 @@ private fun EmptyEntriesState() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = Paper)
+        colors = CardDefaults.cardColors(containerColor = trackerCardColor())
     ) {
         Column(
             modifier = Modifier
@@ -1003,12 +1234,12 @@ private fun EmptyEntriesState() {
             Text(
                 text = stringResource(R.string.empty_entries_title),
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = trackerPrimaryTextColor()
             )
             Text(
                 text = stringResource(R.string.empty_entries_message),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = trackerSecondaryTextColor(),
                 textAlign = TextAlign.Center
             )
         }
@@ -1024,6 +1255,7 @@ private fun TrackerContentPreview() {
                 entries = listOf(
                     CalorieEntry(
                         id = "meal-1",
+                        name = "Chicken bowl",
                         amount = 650,
                         type = CalorieEntryType.INTAKE,
                         source = CalorieEntrySource.MEAL,
@@ -1031,6 +1263,7 @@ private fun TrackerContentPreview() {
                     ),
                     CalorieEntry(
                         id = "burned-1",
+                        name = "Evening walk",
                         amount = 420,
                         type = CalorieEntryType.BURNED,
                         source = CalorieEntrySource.WATCH,
@@ -1051,6 +1284,7 @@ private fun TrackerContentPreview() {
                 totalBurned = 420,
                 netCalories = 230
             ),
+            onEntryNameChanged = {},
             onCalorieInputChanged = {},
             onTypeSelected = {},
             onSourceSelected = {},
@@ -1060,7 +1294,11 @@ private fun TrackerContentPreview() {
             onCancelEditingClicked = {},
             onHistoryFilterSelected = {},
             onDismissDeleteDialog = {},
-            onConfirmDeleteEntry = {}
+            onConfirmDeleteEntry = {},
+            onStartEditingGoalTarget = {},
+            onGoalTargetInputChanged = {},
+            onCancelGoalTargetEditing = {},
+            onSaveGoalTarget = {}
         )
     }
 }
@@ -1071,6 +1309,52 @@ private data class SelectionOption(
     val accent: Color,
     val onClick: () -> Unit
 )
+
+@Composable
+private fun entryDisplayTitle(entry: CalorieEntry, index: Int): String {
+    if (entry.name.isNotBlank()) {
+        return entry.name
+    }
+
+    return stringResource(
+        if (entry.type == CalorieEntryType.INTAKE) {
+            R.string.history_intake_entry_template
+        } else {
+            R.string.history_burned_entry_template
+        },
+        index
+    )
+}
+
+@Composable
+private fun entryDisplaySubtitle(entry: CalorieEntry): String {
+    val source = sourceLabel(entry.source)
+    return if (entry.name.isBlank()) {
+        source
+    } else {
+        stringResource(
+            if (entry.type == CalorieEntryType.INTAKE) {
+                R.string.entry_subtitle_intake_template
+            } else {
+                R.string.entry_subtitle_burned_template
+            },
+            source
+        )
+    }
+}
+
+@Composable
+private fun deleteEntryLabel(entry: CalorieEntry): String {
+    if (entry.name.isNotBlank()) {
+        return entry.name
+    }
+
+    return if (entry.type == CalorieEntryType.INTAKE) {
+        stringResource(R.string.entry_type_intake)
+    } else {
+        stringResource(R.string.entry_type_burned)
+    }
+}
 
 private fun averageEntryCalories(uiState: TrackerUiState): Int {
     return if (uiState.entries.isEmpty()) 0 else uiState.entries.sumOf { it.amount } / uiState.entries.size

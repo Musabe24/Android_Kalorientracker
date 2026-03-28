@@ -26,7 +26,7 @@ private val DarkColorScheme = darkColorScheme(
     onTertiary = WhiteSmoke,
     onBackground = NightText,
     onSurface = NightText,
-    onSurfaceVariant = NightMuted
+    onSurfaceVariant = NightText.copy(alpha = 0.82f)
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -41,7 +41,7 @@ private val LightColorScheme = lightColorScheme(
     onTertiary = WhiteSmoke,
     onBackground = Ink,
     onSurface = Ink,
-    onSurfaceVariant = InkMuted
+    onSurfaceVariant = Ink.copy(alpha = 0.74f)
 )
 
 @Composable
