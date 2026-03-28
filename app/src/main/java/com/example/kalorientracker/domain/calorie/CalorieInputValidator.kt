@@ -6,7 +6,7 @@ package com.example.kalorientracker.domain.calorie
  * Contract:
  * - Blank values are invalid.
  * - Non-integer values are invalid.
- * - Negative values are invalid.
+ * - Values smaller than 1 are invalid.
  * - Valid values are returned as [ValidationResult.Valid].
  */
 class CalorieInputValidator {
@@ -18,8 +18,8 @@ class CalorieInputValidator {
         val parsedCalories = rawValue.toIntOrNull()
             ?: return ValidationResult.Invalid("Input must be a whole number.")
 
-        if (parsedCalories < 0) {
-            return ValidationResult.Invalid("Calories must be zero or positive.")
+        if (parsedCalories <= 0) {
+            return ValidationResult.Invalid("Calories must be greater than zero.")
         }
 
         return ValidationResult.Valid(parsedCalories)

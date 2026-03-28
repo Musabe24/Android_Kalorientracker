@@ -27,4 +27,11 @@ class CalorieInputValidatorTest {
 
         assertTrue(result is ValidationResult.Invalid)
     }
+
+    @Test
+    fun `validate returns invalid result for zero`() {
+        val result = validator.validate("0")
+
+        assertTrue(result is ValidationResult.Invalid)
+    }
 }
