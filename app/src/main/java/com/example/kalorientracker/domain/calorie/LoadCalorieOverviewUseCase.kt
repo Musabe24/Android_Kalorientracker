@@ -7,7 +7,7 @@ class LoadCalorieOverviewUseCase(
     private val repository: CalorieEntryRepository,
     private val dailyCalorieCalculator: DailyCalorieCalculator
 ) {
-    operator fun invoke(): CalorieOverview {
+    suspend operator fun invoke(): CalorieOverview {
         val entries = repository.getEntries()
         val summary = dailyCalorieCalculator.calculateSummary(entries)
         return CalorieOverview(

@@ -4,42 +4,51 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class LoadCalorieOverviewUseCaseTest {
+class LoadCalorieHistoryUseCaseTest {
     @Test
-    fun `invoke returns entries with calculated summary`() = runTest {
-        val repository = StaticCalorieEntryRepository(
+    fun `invoke groups entries by day in descending order`() = runTest {
+        val repository = HistoryRepository(
             entries = listOf(
                 CalorieEntry(
                     id = "entry-1",
-                    amount = 700,
+                    amount = 300,
                     type = CalorieEntryType.INTAKE,
                     source = CalorieEntrySource.MEAL,
-                    recordedOnEpochDay = 19810L
+                    recordedOnEpochDay = 20539L
                 ),
                 CalorieEntry(
                     id = "entry-2",
-                    amount = 250,
+                    amount = 200,
                     type = CalorieEntryType.BURNED,
                     source = CalorieEntrySource.WATCH,
-                    recordedOnEpochDay = 19810L
+                    recordedOnEpochDay = 20540L
+                ),
+                CalorieEntry(
+                    id = "entry-3",
+                    amount = 500,
+                    type = CalorieEntryType.INTAKE,
+                    source = CalorieEntrySource.MANUAL,
+                    recordedOnEpochDay = 20540L
                 )
             )
         )
-        val useCase = LoadCalorieOverviewUseCase(
+        val useCase = LoadCalorieHistoryUseCase(
             repository = repository,
             dailyCalorieCalculator = DailyCalorieCalculator()
         )
 
-        val overview = useCase()
+        val history = useCase()
 
-        assertEquals(2, overview.entries.size)
-        assertEquals(700, overview.summary.totalIntake)
-        assertEquals(250, overview.summary.totalBurned)
-        assertEquals(450, overview.summary.netCalories)
+        assertEquals(2, history.size)
+        assertEquals(20540L, history.first().epochDay)
+        assertEquals(2, history.first().entries.size)
+        assertEquals(500, history.first().totalIntake)
+        assertEquals(200, history.first().totalBurned)
+        assertEquals(300, history.first().netCalories)
     }
 }
 
-private class StaticCalorieEntryRepository(
+private class HistoryRepository(
     private val entries: List<CalorieEntry>
 ) : CalorieEntryRepository {
     override suspend fun getEntries(): List<CalorieEntry> = entries

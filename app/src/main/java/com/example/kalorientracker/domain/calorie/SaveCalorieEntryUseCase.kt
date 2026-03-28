@@ -14,7 +14,7 @@ class SaveCalorieEntryUseCase(
     private val inputValidator: CalorieInputValidator,
     private val clock: Clock
 ) {
-    operator fun invoke(
+    suspend operator fun invoke(
         rawCalories: String,
         entryType: CalorieEntryType,
         entrySource: CalorieEntrySource,

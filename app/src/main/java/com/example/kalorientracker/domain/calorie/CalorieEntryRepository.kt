@@ -8,9 +8,14 @@ package com.example.kalorientracker.domain.calorie
  * - Implementations must not silently ignore malformed or failed writes.
  */
 interface CalorieEntryRepository {
-    fun getEntries(): List<CalorieEntry>
+    suspend fun getEntries(): List<CalorieEntry>
 
-    fun saveEntry(entry: CalorieEntry)
+    suspend fun getEntriesBetween(
+        startEpochDayInclusive: Long,
+        endEpochDayInclusive: Long
+    ): List<CalorieEntry>
 
-    fun deleteEntry(entryId: String)
+    suspend fun saveEntry(entry: CalorieEntry)
+
+    suspend fun deleteEntry(entryId: String)
 }

@@ -3,6 +3,7 @@ package com.example.kalorientracker.domain.calorie
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -16,7 +17,7 @@ class SaveCalorieEntryUseCaseTest {
     )
 
     @Test
-    fun `invoke persists valid intake entry with tracked day`() {
+    fun `invoke persists valid intake entry with tracked day`() = runTest {
         val result = useCase(
             rawCalories = "420",
             entryType = CalorieEntryType.INTAKE,
@@ -32,7 +33,7 @@ class SaveCalorieEntryUseCaseTest {
     }
 
     @Test
-    fun `invoke updates an existing entry instead of appending a second one`() {
+    fun `invoke updates an existing entry instead of appending a second one`() = runTest {
         repository.saveEntry(
             CalorieEntry(
                 id = "entry-1",
@@ -67,7 +68,7 @@ class SaveCalorieEntryUseCaseTest {
     }
 
     @Test
-    fun `invoke returns validation error for invalid input`() {
+    fun `invoke returns validation error for invalid input`() = runTest {
         val result = useCase(
             rawCalories = "",
             entryType = CalorieEntryType.BURNED,
@@ -84,9 +85,18 @@ class SaveCalorieEntryUseCaseTest {
 private class FakeCalorieEntryRepository : CalorieEntryRepository {
     private val entries = mutableListOf<CalorieEntry>()
 
-    override fun getEntries(): List<CalorieEntry> = entries.toList()
+    override suspend fun getEntries(): List<CalorieEntry> = entries.toList()
 
-    override fun saveEntry(entry: CalorieEntry) {
+    override suspend fun getEntriesBetween(
+        startEpochDayInclusive: Long,
+        endEpochDayInclusive: Long
+    ): List<CalorieEntry> {
+        return entries.filter {
+            it.recordedOnEpochDay in startEpochDayInclusive..endEpochDayInclusive
+        }
+    }
+
+    override suspend fun saveEntry(entry: CalorieEntry) {
         val existingIndex = entries.indexOfFirst { it.id == entry.id }
         if (existingIndex >= 0) {
             entries[existingIndex] = entry
@@ -95,7 +105,7 @@ private class FakeCalorieEntryRepository : CalorieEntryRepository {
         }
     }
 
-    override fun deleteEntry(entryId: String) {
+    override suspend fun deleteEntry(entryId: String) {
         entries.removeAll { it.id == entryId }
     }
 }

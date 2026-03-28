@@ -1,45 +1,51 @@
 package com.example.kalorientracker.domain.calorie
 
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class LoadCalorieOverviewUseCaseTest {
+class LoadWeeklyCalorieTrendUseCaseTest {
     @Test
-    fun `invoke returns entries with calculated summary`() = runTest {
-        val repository = StaticCalorieEntryRepository(
+    fun `invoke returns seven days with zeros for missing days`() = runTest {
+        val repository = WeeklyTrendRepository(
             entries = listOf(
                 CalorieEntry(
                     id = "entry-1",
                     amount = 700,
                     type = CalorieEntryType.INTAKE,
                     source = CalorieEntrySource.MEAL,
-                    recordedOnEpochDay = 19810L
+                    recordedOnEpochDay = 20538L
                 ),
                 CalorieEntry(
                     id = "entry-2",
                     amount = 250,
                     type = CalorieEntryType.BURNED,
                     source = CalorieEntrySource.WATCH,
-                    recordedOnEpochDay = 19810L
+                    recordedOnEpochDay = 20540L
                 )
             )
         )
-        val useCase = LoadCalorieOverviewUseCase(
+        val useCase = LoadWeeklyCalorieTrendUseCase(
             repository = repository,
-            dailyCalorieCalculator = DailyCalorieCalculator()
+            dailyCalorieCalculator = DailyCalorieCalculator(),
+            clock = Clock.fixed(Instant.parse("2026-03-28T10:15:30Z"), ZoneOffset.UTC)
         )
 
-        val overview = useCase()
+        val trend = useCase()
 
-        assertEquals(2, overview.entries.size)
-        assertEquals(700, overview.summary.totalIntake)
-        assertEquals(250, overview.summary.totalBurned)
-        assertEquals(450, overview.summary.netCalories)
+        assertEquals(7, trend.size)
+        assertEquals(20534L, trend.first().epochDay)
+        assertEquals(20540L, trend.last().epochDay)
+        assertEquals(700, trend[4].totalIntake)
+        assertEquals(0, trend[5].totalIntake)
+        assertEquals(250, trend[6].totalBurned)
     }
 }
 
-private class StaticCalorieEntryRepository(
+private class WeeklyTrendRepository(
     private val entries: List<CalorieEntry>
 ) : CalorieEntryRepository {
     override suspend fun getEntries(): List<CalorieEntry> = entries

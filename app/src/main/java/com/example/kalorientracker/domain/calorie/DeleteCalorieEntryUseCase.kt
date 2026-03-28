@@ -6,7 +6,7 @@ package com.example.kalorientracker.domain.calorie
 class DeleteCalorieEntryUseCase(
     private val repository: CalorieEntryRepository
 ) {
-    operator fun invoke(entryId: String) {
+    suspend operator fun invoke(entryId: String) {
         repository.deleteEntry(entryId)
     }
 }
