@@ -112,6 +112,10 @@ class TrackerViewModel(
         _uiState.update { it.copy(entryNameInput = value) }
     }
 
+    fun selectDestination(destination: TrackerDestination) {
+        _uiState.update { it.copy(selectedDestination = destination) }
+    }
+
     fun onEntryTypeSelected(type: CalorieEntryType) {
         _uiState.update { currentState ->
             currentState.copy(
@@ -166,6 +170,7 @@ class TrackerViewModel(
     fun startEditingGoalTarget() {
         _uiState.update {
             it.copy(
+                selectedDestination = TrackerDestination.Overview,
                 isEditingGoalTarget = true,
                 targetCaloriesInput = it.targetCalories.toString(),
                 goalTargetError = null
@@ -240,6 +245,7 @@ class TrackerViewModel(
     fun startEditing(entry: CalorieEntry) {
         _uiState.update {
             it.copy(
+                selectedDestination = TrackerDestination.Capture,
                 entryNameInput = entry.name,
                 calorieInput = entry.amount.toString(),
                 selectedType = entry.type,

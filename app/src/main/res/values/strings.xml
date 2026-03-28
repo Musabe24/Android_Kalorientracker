@@ -1,5 +1,10 @@
 <resources>
     <string name="app_name">Kalorientracker</string>
+    <string name="navigation_overview">Overview</string>
+    <string name="navigation_capture">Capture</string>
+    <string name="navigation_history">History</string>
+    <string name="overview_title">Your calorie dashboard</string>
+    <string name="overview_subtitle">Keep today’s balance, target progress, and longer trends in one focused place.</string>
     <string name="dashboard_eyebrow">CALORIE COMMAND CENTER</string>
     <string name="dashboard_title">Fuel with intent.</string>
     <string name="dashboard_subtitle">%1$d tracked moments are shaping the current balance.</string>
@@ -47,6 +52,11 @@
     <string name="edit_entry_form_title">Edit entry</string>
     <string name="composer_eyebrow">QUICK CAPTURE</string>
     <string name="composer_subtitle">Log meals, workouts, and manual adjustments without leaving the dashboard.</string>
+    <string name="capture_screen_subtitle">Capture new entries on a dedicated screen, then review what was logged today.</string>
+    <string name="capture_today_title">Today’s entries</string>
+    <string name="capture_today_subtitle">Review, edit, or delete what already affects today’s balance.</string>
+    <string name="capture_empty_title">Nothing logged for today yet.</string>
+    <string name="capture_empty_message">Use the form above to create the first entry for today or move the date backward to backfill older days.</string>
     <string name="entry_name_input_label">Name</string>
     <string name="entry_name_input_hint">Add context like oatmeal, chicken bowl, or evening walk.</string>
     <string name="entry_date_label">Date</string>
@@ -71,6 +81,7 @@
     <string name="timeline_eyebrow">TODAY TIMELINE</string>
     <string name="entry_list_title">Entries</string>
     <string name="history_title">Recent history</string>
+    <string name="history_screen_subtitle">Browse past days without crowding the dashboard or the capture workflow.</string>
     <string name="timeline_subtitle">A clean trail of what moved your daily balance.</string>
     <string name="history_filter_today">Today</string>
     <string name="history_filter_seven_days">7 days</string>

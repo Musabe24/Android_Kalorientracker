@@ -10,6 +10,7 @@ import com.example.kalorientracker.domain.calorie.GoalProgressInsights
 import com.example.kalorientracker.domain.calorie.GoalTargetValidationError
 
 data class TrackerUiState(
+    val selectedDestination: TrackerDestination = TrackerDestination.Overview,
     val dayNumber: Int = 1,
     val entries: List<CalorieEntry> = emptyList(),
     val historyDays: List<CalorieHistoryDay> = emptyList(),
@@ -91,6 +92,12 @@ data class TrackerUiState(
             HistoryFilter.SevenDays -> historyDays.filter { it.epochDay >= currentEpochDay - 6L }
             HistoryFilter.AllTime -> historyDays
         }
+}
+
+enum class TrackerDestination {
+    Overview,
+    Capture,
+    History
 }
 
 enum class HistoryFilter {
