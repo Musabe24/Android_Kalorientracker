@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Kalorientracker</string>
     <string name="summary_title">Daily summary</string>
+    <string name="day_title_template">Day %1$d</string>
     <string name="total_intake_template">Intake: %1$d kcal</string>
     <string name="total_burned_template">Burned: %1$d kcal</string>
     <string name="net_calories_template">Net: %1$d kcal</string>
