@@ -5,6 +5,8 @@
     <string name="total_intake_template">Intake: %1$d kcal</string>
     <string name="total_burned_template">Burned: %1$d kcal</string>
     <string name="net_calories_template">Net: %1$d kcal</string>
+    <string name="entry_form_title">Add entry</string>
+    <string name="edit_entry_form_title">Edit entry</string>
     <string name="calorie_input_label">Calories</string>
     <string name="entry_type_title">Entry type</string>
     <string name="entry_type_intake">Intake</string>
@@ -14,7 +16,13 @@
     <string name="entry_source_watch">Watch</string>
     <string name="entry_source_manual">Manual</string>
     <string name="add_entry_button">Add entry</string>
+    <string name="update_entry_button">Save changes</string>
+    <string name="cancel_edit_button">Cancel</string>
     <string name="entry_list_title">Entries</string>
+    <string name="empty_entries_message">No calorie entries yet. Add your first meal or workout above.</string>
     <string name="entry_index_template">Entry #%1$d</string>
     <string name="entry_calories_template">%1$d kcal</string>
+    <string name="entry_date_template">Recorded on %1$s</string>
+    <string name="edit_entry_button">Edit</string>
+    <string name="delete_entry_button">Delete</string>
 </resources>

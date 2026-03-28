@@ -9,12 +9,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
-import com.example.kalorientracker.ui.home.GreetingScreen
-import com.example.kalorientracker.ui.home.GreetingViewModel
+import com.example.kalorientracker.ui.tracker.TrackerScreen
+import com.example.kalorientracker.ui.tracker.TrackerViewModel
 import com.example.kalorientracker.ui.theme.KalorientrackerTheme
 
 class MainActivity : ComponentActivity() {
-    private val greetingViewModel: GreetingViewModel by viewModels()
+    private val trackerViewModel: TrackerViewModel by viewModels {
+        TrackerViewModel.factory(applicationContext)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,8 +24,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             KalorientrackerTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    GreetingScreen(
-                        viewModel = greetingViewModel,
+                    TrackerScreen(
+                        viewModel = trackerViewModel,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
