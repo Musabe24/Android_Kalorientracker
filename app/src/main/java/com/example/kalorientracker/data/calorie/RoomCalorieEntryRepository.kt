@@ -2,11 +2,23 @@ package com.example.kalorientracker.data.calorie
 
 import com.example.kalorientracker.domain.calorie.CalorieEntry
 import com.example.kalorientracker.domain.calorie.CalorieEntryRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 
 class RoomCalorieEntryRepository(
     private val calorieEntryDao: CalorieEntryDao,
     private val legacyCalorieEntryStore: LegacyCalorieEntryStore
 ) : CalorieEntryRepository {
+    override fun observeEntries(): Flow<List<CalorieEntry>> = flow {
+        migrateLegacyEntriesIfNeeded()
+        emitAll(
+            calorieEntryDao.observeAll().map { entities ->
+                entities.map(CalorieEntryEntity::toDomain)
+            }
+        )
+    }
 
     override suspend fun getEntries(): List<CalorieEntry> {
         migrateLegacyEntriesIfNeeded()

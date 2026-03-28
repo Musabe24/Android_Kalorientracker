@@ -20,10 +20,10 @@ class SaveCalorieEntryUseCase(
         entryType: CalorieEntryType,
         entrySource: CalorieEntrySource,
         editingEntryId: String?,
-        editingEntryRecordedOnEpochDay: Long?
+        recordedOnEpochDay: Long
     ): SaveCalorieEntryResult {
-        require((editingEntryId == null) == (editingEntryRecordedOnEpochDay == null)) {
-            "Editing metadata must contain both id and recorded day or neither."
+        require(recordedOnEpochDay <= LocalDate.now(clock).toEpochDay()) {
+            "Entries cannot be saved in the future."
         }
 
         return when (val validationResult = inputValidator.validate(rawCalories)) {
@@ -36,8 +36,7 @@ class SaveCalorieEntryUseCase(
                         amount = validationResult.calories,
                         type = entryType,
                         source = entrySource,
-                        recordedOnEpochDay = editingEntryRecordedOnEpochDay
-                            ?: LocalDate.now(clock).toEpochDay()
+                        recordedOnEpochDay = recordedOnEpochDay
                     )
                 )
                 SaveCalorieEntryResult.Success
@@ -49,5 +48,5 @@ class SaveCalorieEntryUseCase(
 sealed interface SaveCalorieEntryResult {
     data object Success : SaveCalorieEntryResult
 
-    data class ValidationError(val message: String) : SaveCalorieEntryResult
+    data class ValidationError(val reason: CalorieInputValidationError) : SaveCalorieEntryResult
 }

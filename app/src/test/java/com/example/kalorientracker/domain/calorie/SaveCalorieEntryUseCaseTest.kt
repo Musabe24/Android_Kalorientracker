@@ -3,6 +3,9 @@ package com.example.kalorientracker.domain.calorie
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -24,7 +27,7 @@ class SaveCalorieEntryUseCaseTest {
             entryType = CalorieEntryType.INTAKE,
             entrySource = CalorieEntrySource.MEAL,
             editingEntryId = null,
-            editingEntryRecordedOnEpochDay = null
+            recordedOnEpochDay = 20540L
         )
 
         assertEquals(SaveCalorieEntryResult.Success, result)
@@ -53,7 +56,7 @@ class SaveCalorieEntryUseCaseTest {
             entryType = CalorieEntryType.BURNED,
             entrySource = CalorieEntrySource.WATCH,
             editingEntryId = "entry-1",
-            editingEntryRecordedOnEpochDay = 19810L
+            recordedOnEpochDay = 19810L
         )
 
         assertEquals(SaveCalorieEntryResult.Success, result)
@@ -80,7 +83,7 @@ class SaveCalorieEntryUseCaseTest {
             entryType = CalorieEntryType.BURNED,
             entrySource = CalorieEntrySource.WATCH,
             editingEntryId = null,
-            editingEntryRecordedOnEpochDay = null
+            recordedOnEpochDay = 20540L
         )
 
         assertTrue(result is SaveCalorieEntryResult.ValidationError)
@@ -90,6 +93,9 @@ class SaveCalorieEntryUseCaseTest {
 
 private class FakeCalorieEntryRepository : CalorieEntryRepository {
     private val entries = mutableListOf<CalorieEntry>()
+    private val entriesFlow = MutableStateFlow<List<CalorieEntry>>(emptyList())
+
+    override fun observeEntries(): Flow<List<CalorieEntry>> = entriesFlow.asStateFlow()
 
     override suspend fun getEntries(): List<CalorieEntry> = entries.toList()
 
@@ -109,9 +115,11 @@ private class FakeCalorieEntryRepository : CalorieEntryRepository {
         } else {
             entries += entry
         }
+        entriesFlow.value = entries.toList()
     }
 
     override suspend fun deleteEntry(entryId: String) {
         entries.removeAll { it.id == entryId }
+        entriesFlow.value = entries.toList()
     }
 }

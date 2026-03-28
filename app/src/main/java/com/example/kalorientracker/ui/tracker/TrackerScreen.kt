@@ -49,11 +49,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.kalorientracker.R
 import com.example.kalorientracker.domain.calorie.CalorieEntry
+import com.example.kalorientracker.domain.calorie.CalorieInputValidationError
 import com.example.kalorientracker.domain.calorie.CalorieEntrySource
 import com.example.kalorientracker.domain.calorie.CalorieEntryType
 import com.example.kalorientracker.domain.calorie.CalorieHistoryDay
 import com.example.kalorientracker.domain.calorie.DailyCalorieTrendPoint
 import com.example.kalorientracker.domain.calorie.GoalProgressInsights
+import com.example.kalorientracker.domain.calorie.GoalTargetValidationError
 import com.example.kalorientracker.ui.theme.Coral
 import com.example.kalorientracker.ui.theme.CoralDeep
 import com.example.kalorientracker.ui.theme.Gold
@@ -84,6 +86,9 @@ fun TrackerScreen(viewModel: TrackerViewModel, modifier: Modifier = Modifier) {
         onCalorieInputChanged = viewModel::onCalorieInputChanged,
         onTypeSelected = viewModel::onEntryTypeSelected,
         onSourceSelected = viewModel::onEntrySourceSelected,
+        onShowPreviousEntryDate = viewModel::showPreviousEntryDate,
+        onShowNextEntryDate = viewModel::showNextEntryDate,
+        onResetEntryDateToToday = viewModel::resetEntryDateToToday,
         onSaveEntryClicked = viewModel::saveEntry,
         onEditEntryClicked = viewModel::startEditing,
         onDeleteEntryClicked = viewModel::requestDeleteEntry,
@@ -109,6 +114,9 @@ fun TrackerContent(
     onCalorieInputChanged: (String) -> Unit,
     onTypeSelected: (CalorieEntryType) -> Unit,
     onSourceSelected: (CalorieEntrySource) -> Unit,
+    onShowPreviousEntryDate: () -> Unit,
+    onShowNextEntryDate: () -> Unit,
+    onResetEntryDateToToday: () -> Unit,
     onSaveEntryClicked: () -> Unit,
     onEditEntryClicked: (CalorieEntry) -> Unit,
     onDeleteEntryClicked: (CalorieEntry) -> Unit,
@@ -192,6 +200,9 @@ fun TrackerContent(
                     onCalorieInputChanged = onCalorieInputChanged,
                     onTypeSelected = onTypeSelected,
                     onSourceSelected = onSourceSelected,
+                    onShowPreviousEntryDate = onShowPreviousEntryDate,
+                    onShowNextEntryDate = onShowNextEntryDate,
+                    onResetEntryDateToToday = onResetEntryDateToToday,
                     onSaveEntryClicked = onSaveEntryClicked,
                     onCancelEditingClicked = onCancelEditingClicked
                 )
@@ -495,7 +506,10 @@ private fun GoalProgressSection(
                         label = { Text(stringResource(R.string.goal_target_input_label)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         supportingText = {
-                            Text(uiState.goalTargetError ?: stringResource(R.string.goal_target_input_hint))
+                            Text(
+                                goalTargetErrorMessage(uiState.goalTargetError)
+                                    ?: stringResource(R.string.goal_target_input_hint)
+                            )
                         },
                         isError = uiState.goalTargetError != null,
                         textStyle = MaterialTheme.typography.bodyLarge.copy(
@@ -850,6 +864,9 @@ private fun EntryComposerCard(
     onCalorieInputChanged: (String) -> Unit,
     onTypeSelected: (CalorieEntryType) -> Unit,
     onSourceSelected: (CalorieEntrySource) -> Unit,
+    onShowPreviousEntryDate: () -> Unit,
+    onShowNextEntryDate: () -> Unit,
+    onResetEntryDateToToday: () -> Unit,
     onSaveEntryClicked: () -> Unit,
     onCancelEditingClicked: () -> Unit
 ) {
@@ -889,6 +906,13 @@ private fun EntryComposerCard(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            EntryDateSelector(
+                uiState = uiState,
+                onShowPreviousEntryDate = onShowPreviousEntryDate,
+                onShowNextEntryDate = onShowNextEntryDate,
+                onResetEntryDateToToday = onResetEntryDateToToday
+            )
+
             OutlinedTextField(
                 value = uiState.calorieInput,
                 onValueChange = onCalorieInputChanged,
@@ -902,7 +926,8 @@ private fun EntryComposerCard(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 isError = uiState.inputError != null,
                 supportingText = {
-                    val supportingMessage = uiState.inputError ?: stringResource(R.string.calorie_input_hint)
+                    val supportingMessage = calorieInputErrorMessage(uiState.inputError)
+                        ?: stringResource(R.string.calorie_input_hint)
                     Text(supportingMessage)
                 },
                 singleLine = true,
@@ -994,6 +1019,45 @@ private fun EntryComposerCard(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun EntryDateSelector(
+    uiState: TrackerUiState,
+    onShowPreviousEntryDate: () -> Unit,
+    onShowNextEntryDate: () -> Unit,
+    onResetEntryDateToToday: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.entry_date_label),
+            style = MaterialTheme.typography.labelLarge,
+            color = trackerSecondaryTextColor()
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = onShowPreviousEntryDate) {
+                Text(text = stringResource(R.string.entry_date_previous))
+            }
+            Text(
+                text = LocalDate.ofEpochDay(uiState.entryRecordedOnEpochDay).format(entryDateFormatter()),
+                style = MaterialTheme.typography.bodyLarge,
+                color = trackerPrimaryTextColor(),
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(
+                onClick = onShowNextEntryDate,
+                enabled = uiState.canMoveEntryDateForward
+            ) {
+                Text(text = stringResource(R.string.entry_date_next))
+            }
+        }
+        TextButton(onClick = onResetEntryDateToToday) {
+            Text(text = stringResource(R.string.entry_date_today))
         }
     }
 }
@@ -1415,6 +1479,9 @@ private fun TrackerContentPreview() {
             onCalorieInputChanged = {},
             onTypeSelected = {},
             onSourceSelected = {},
+            onShowPreviousEntryDate = {},
+            onShowNextEntryDate = {},
+            onResetEntryDateToToday = {},
             onSaveEntryClicked = {},
             onEditEntryClicked = {},
             onDeleteEntryClicked = {},
@@ -1491,6 +1558,26 @@ private fun averageEntryCalories(uiState: TrackerUiState): Int {
 }
 
 @Composable
+private fun calorieInputErrorMessage(error: CalorieInputValidationError?): String? {
+    return when (error) {
+        CalorieInputValidationError.Blank -> stringResource(R.string.error_input_blank)
+        CalorieInputValidationError.NotWholeNumber -> stringResource(R.string.error_input_not_whole_number)
+        CalorieInputValidationError.NonPositive -> stringResource(R.string.error_input_non_positive)
+        null -> null
+    }
+}
+
+@Composable
+private fun goalTargetErrorMessage(error: GoalTargetValidationError?): String? {
+    return when (error) {
+        GoalTargetValidationError.Blank -> stringResource(R.string.error_target_blank)
+        GoalTargetValidationError.NotWholeNumber -> stringResource(R.string.error_target_not_whole_number)
+        GoalTargetValidationError.NonPositive -> stringResource(R.string.error_target_non_positive)
+        null -> null
+    }
+}
+
+@Composable
 private fun sourceLabel(source: CalorieEntrySource): String {
     return when (source) {
         CalorieEntrySource.MEAL -> stringResource(R.string.entry_source_meal)
@@ -1520,4 +1607,8 @@ private fun trendWindowLabel(startEpochDay: Long, endEpochDay: Long): String {
 
 private fun historyDateFormatter(): DateTimeFormatter {
     return DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.getDefault())
+}
+
+private fun entryDateFormatter(): DateTimeFormatter {
+    return DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
 }

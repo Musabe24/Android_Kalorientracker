@@ -26,6 +26,9 @@
     <string name="goal_target_input_hint">Choose a realistic daily ceiling in whole calories.</string>
     <string name="goal_target_save_button">Save</string>
     <string name="goal_target_cancel_button">Cancel</string>
+    <string name="error_target_blank">Target must not be blank.</string>
+    <string name="error_target_not_whole_number">Target must be a whole number.</string>
+    <string name="error_target_non_positive">Target must be greater than zero.</string>
     <string name="weekly_trend_eyebrow">TREND LINE</string>
     <string name="weekly_trend_title">Calorie history over time</string>
     <string name="weekly_trend_subtitle">Switch between short-term and full-history views to track how your balance evolves.</string>
@@ -46,8 +49,15 @@
     <string name="composer_subtitle">Log meals, workouts, and manual adjustments without leaving the dashboard.</string>
     <string name="entry_name_input_label">Name</string>
     <string name="entry_name_input_hint">Add context like oatmeal, chicken bowl, or evening walk.</string>
+    <string name="entry_date_label">Date</string>
+    <string name="entry_date_previous">Earlier</string>
+    <string name="entry_date_next">Later</string>
+    <string name="entry_date_today">Jump to today</string>
     <string name="calorie_input_label">Calories</string>
     <string name="calorie_input_hint">Use whole numbers for the fastest logging flow.</string>
+    <string name="error_input_blank">Input must not be blank.</string>
+    <string name="error_input_not_whole_number">Input must be a whole number.</string>
+    <string name="error_input_non_positive">Calories must be greater than zero.</string>
     <string name="entry_type_title">Manual direction</string>
     <string name="entry_type_intake">Intake</string>
     <string name="entry_type_burned">Burned</string>

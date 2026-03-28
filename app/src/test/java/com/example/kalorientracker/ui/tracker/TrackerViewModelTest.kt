@@ -4,11 +4,13 @@ import com.example.kalorientracker.domain.calorie.CalorieEntry
 import com.example.kalorientracker.domain.calorie.CalorieEntryRepository
 import com.example.kalorientracker.domain.calorie.CalorieEntrySource
 import com.example.kalorientracker.domain.calorie.CalorieEntryType
+import com.example.kalorientracker.domain.calorie.CalorieInputValidationError
 import com.example.kalorientracker.domain.calorie.CalculateGoalProgressUseCase
 import com.example.kalorientracker.domain.calorie.CalorieInputValidator
 import com.example.kalorientracker.domain.calorie.DailyCalorieCalculator
 import com.example.kalorientracker.domain.calorie.DeleteCalorieEntryUseCase
 import com.example.kalorientracker.domain.calorie.GoalTargetRepository
+import com.example.kalorientracker.domain.calorie.GoalTargetValidationError
 import com.example.kalorientracker.domain.calorie.LoadCalorieHistoryUseCase
 import com.example.kalorientracker.domain.calorie.LoadCalorieOverviewUseCase
 import com.example.kalorientracker.domain.calorie.LoadCalorieTimelineTrendUseCase
@@ -21,6 +23,9 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -43,7 +48,7 @@ class TrackerViewModelTest {
         advanceUntilIdle()
 
         val uiState = viewModel.uiState.value
-        assertEquals(1, uiState.dayNumber)
+        assertEquals(28, uiState.dayNumber)
         assertTrue(uiState.entries.isEmpty())
         assertTrue(uiState.historyDays.isEmpty())
         assertTrue(uiState.timelineTrend.isEmpty())
@@ -101,7 +106,7 @@ class TrackerViewModelTest {
         viewModel.saveEntry()
         advanceUntilIdle()
 
-        assertNotNull(viewModel.uiState.value.inputError)
+        assertEquals(CalorieInputValidationError.NonPositive, viewModel.uiState.value.inputError)
     }
 
     @Test
@@ -114,7 +119,7 @@ class TrackerViewModelTest {
                     amount = 300,
                     type = CalorieEntryType.INTAKE,
                     source = CalorieEntrySource.MEAL,
-                    recordedOnEpochDay = 19810L
+                    recordedOnEpochDay = 20540L
                 )
             )
         )
@@ -382,7 +387,7 @@ class TrackerViewModelTest {
 
         val uiState = viewModel.uiState.value
         assertTrue(uiState.isEditingGoalTarget)
-        assertEquals("Target must be a whole number.", uiState.goalTargetError)
+        assertEquals(GoalTargetValidationError.NotWholeNumber, uiState.goalTargetError)
         assertEquals(2200, uiState.targetCalories)
     }
 
@@ -410,7 +415,8 @@ class TrackerViewModelTest {
             ),
             loadCalorieOverviewUseCase = LoadCalorieOverviewUseCase(
                 repository = repository,
-                dailyCalorieCalculator = DailyCalorieCalculator()
+                dailyCalorieCalculator = DailyCalorieCalculator(),
+                clock = Clock.fixed(Instant.parse("2026-03-28T10:15:30Z"), ZoneOffset.UTC)
             ),
             loadWeeklyCalorieTrendUseCase = LoadWeeklyCalorieTrendUseCase(
                 repository = repository,
@@ -432,16 +438,25 @@ class TrackerViewModelTest {
 private class InMemoryGoalTargetRepository(
     private var targetCalories: Int = CalculateGoalProgressUseCase.DEFAULT_TARGET_CALORIES
 ) : GoalTargetRepository {
+    private val targetFlow = MutableStateFlow(targetCalories)
+
+    override fun observeTargetCalories(): Flow<Int> = targetFlow.asStateFlow()
+
     override suspend fun getTargetCalories(): Int = targetCalories
 
     override suspend fun setTargetCalories(targetCalories: Int) {
         this.targetCalories = targetCalories
+        targetFlow.value = targetCalories
     }
 }
 
 private class InMemoryCalorieEntryRepository(
     private val entries: MutableList<CalorieEntry> = mutableListOf()
 ) : CalorieEntryRepository {
+    private val entriesFlow = MutableStateFlow(entries.toList())
+
+    override fun observeEntries(): Flow<List<CalorieEntry>> = entriesFlow.asStateFlow()
+
     override suspend fun getEntries(): List<CalorieEntry> = entries.toList()
 
     override suspend fun getEntriesBetween(
@@ -460,9 +475,11 @@ private class InMemoryCalorieEntryRepository(
         } else {
             entries += entry
         }
+        entriesFlow.value = entries.toList()
     }
 
     override suspend fun deleteEntry(entryId: String) {
         entries.removeAll { it.id == entryId }
+        entriesFlow.value = entries.toList()
     }
 }

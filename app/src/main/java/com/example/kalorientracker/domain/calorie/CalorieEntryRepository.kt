@@ -1,5 +1,7 @@
 package com.example.kalorientracker.domain.calorie
 
+import kotlinx.coroutines.flow.Flow
+
 /**
  * Repository contract for tracked calorie entries.
  *
@@ -8,6 +10,8 @@ package com.example.kalorientracker.domain.calorie
  * - Implementations must not silently ignore malformed or failed writes.
  */
 interface CalorieEntryRepository {
+    fun observeEntries(): Flow<List<CalorieEntry>>
+
     suspend fun getEntries(): List<CalorieEntry>
 
     suspend fun getEntriesBetween(

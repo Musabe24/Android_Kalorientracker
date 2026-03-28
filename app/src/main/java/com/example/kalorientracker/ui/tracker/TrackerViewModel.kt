@@ -1,31 +1,26 @@
 package com.example.kalorientracker.ui.tracker
 
-import android.content.Context
-import androidx.lifecycle.viewModelScope
-import androidx.room.Room
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.kalorientracker.data.calorie.CalorieTrackerDatabase
-import com.example.kalorientracker.data.calorie.CalorieEntryStorageCodec
-import com.example.kalorientracker.data.calorie.LegacyCalorieEntryStore
-import com.example.kalorientracker.data.calorie.RoomCalorieEntryRepository
-import com.example.kalorientracker.data.calorie.RoomGoalTargetRepository
+import com.example.kalorientracker.app.TrackerAppContainer
 import com.example.kalorientracker.domain.calorie.CalorieEntry
 import com.example.kalorientracker.domain.calorie.CalorieEntrySource
 import com.example.kalorientracker.domain.calorie.CalorieEntryType
 import com.example.kalorientracker.domain.calorie.CalculateGoalProgressUseCase
-import com.example.kalorientracker.domain.calorie.CalorieInputValidator
-import com.example.kalorientracker.domain.calorie.DailyCalorieCalculator
 import com.example.kalorientracker.domain.calorie.DeleteCalorieEntryUseCase
-import com.example.kalorientracker.domain.calorie.LoadGoalTargetUseCase
+import com.example.kalorientracker.domain.calorie.GoalProgressInsights
+import com.example.kalorientracker.domain.calorie.GoalTargetValidationError
 import com.example.kalorientracker.domain.calorie.LoadCalorieHistoryUseCase
-import com.example.kalorientracker.domain.calorie.LoadCalorieTimelineTrendUseCase
 import com.example.kalorientracker.domain.calorie.LoadCalorieOverviewUseCase
+import com.example.kalorientracker.domain.calorie.LoadCalorieTimelineTrendUseCase
+import com.example.kalorientracker.domain.calorie.LoadGoalTargetUseCase
 import com.example.kalorientracker.domain.calorie.LoadWeeklyCalorieTrendUseCase
 import com.example.kalorientracker.domain.calorie.SaveCalorieEntryResult
 import com.example.kalorientracker.domain.calorie.SaveCalorieEntryUseCase
+import com.example.kalorientracker.domain.calorie.CalorieInputValidationError
 import com.example.kalorientracker.domain.calorie.UpdateGoalTargetResult
 import com.example.kalorientracker.domain.calorie.UpdateGoalTargetUseCase
 import java.time.Clock
@@ -33,6 +28,7 @@ import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -49,13 +45,57 @@ class TrackerViewModel(
     private val clock: Clock
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(
-        TrackerUiState(currentEpochDay = LocalDate.now(clock).toEpochDay())
+        TrackerUiState(
+            currentEpochDay = LocalDate.now(clock).toEpochDay(),
+            entryRecordedOnEpochDay = LocalDate.now(clock).toEpochDay()
+        )
     )
     val uiState: StateFlow<TrackerUiState> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            refreshOverview()
+            combine(
+                loadCalorieOverviewUseCase.observe(),
+                loadCalorieHistoryUseCase.observe(),
+                loadCalorieTimelineTrendUseCase.observe(),
+                loadWeeklyCalorieTrendUseCase.observe(),
+                loadGoalTargetUseCase.observe()
+            ) { overview, historyDays, timelineTrend, weeklyTrend, targetCalories ->
+                TrackerObservedState(
+                    overview = overview,
+                    historyDays = historyDays,
+                    timelineTrend = timelineTrend,
+                    weeklyTrend = weeklyTrend,
+                    targetCalories = targetCalories,
+                    goalProgressInsights = calculateGoalProgressUseCase(
+                        netCalories = overview.summary.netCalories,
+                        weeklyTrend = weeklyTrend,
+                        targetCalories = targetCalories
+                    )
+                )
+            }.collect { observedState ->
+                val currentEpochDay = LocalDate.now(clock).toEpochDay()
+                _uiState.update { currentState ->
+                    currentState.copy(
+                        dayNumber = LocalDate.ofEpochDay(currentEpochDay).dayOfMonth,
+                        entries = observedState.overview.entries,
+                        historyDays = observedState.historyDays,
+                        timelineTrend = observedState.timelineTrend,
+                        weeklyTrend = observedState.weeklyTrend,
+                        goalProgressInsights = observedState.goalProgressInsights,
+                        targetCalories = observedState.targetCalories,
+                        currentEpochDay = currentEpochDay,
+                        selectedTrendWindowEndEpochDay = currentState.selectedTrendWindowEndEpochDay
+                            ?.coerceAtMost(currentEpochDay)
+                            ?: currentEpochDay,
+                        entryRecordedOnEpochDay = currentState.entryRecordedOnEpochDay
+                            .coerceAtMost(currentEpochDay),
+                        totalIntake = observedState.overview.summary.totalIntake,
+                        totalBurned = observedState.overview.summary.totalBurned,
+                        netCalories = observedState.overview.summary.netCalories
+                    )
+                }
+            }
         }
     }
 
@@ -94,6 +134,35 @@ class TrackerViewModel(
         }
     }
 
+    fun onEntryDateSelected(epochDay: Long) {
+        _uiState.update { currentState ->
+            currentState.copy(
+                entryRecordedOnEpochDay = epochDay.coerceAtMost(currentState.currentEpochDay)
+            )
+        }
+    }
+
+    fun showPreviousEntryDate() {
+        _uiState.update { currentState ->
+            currentState.copy(entryRecordedOnEpochDay = currentState.entryRecordedOnEpochDay - 1L)
+        }
+    }
+
+    fun showNextEntryDate() {
+        _uiState.update { currentState ->
+            currentState.copy(
+                entryRecordedOnEpochDay = (currentState.entryRecordedOnEpochDay + 1L)
+                    .coerceAtMost(currentState.currentEpochDay)
+            )
+        }
+    }
+
+    fun resetEntryDateToToday() {
+        _uiState.update { currentState ->
+            currentState.copy(entryRecordedOnEpochDay = currentState.currentEpochDay)
+        }
+    }
+
     fun startEditingGoalTarget() {
         _uiState.update {
             it.copy(
@@ -128,11 +197,10 @@ class TrackerViewModel(
         viewModelScope.launch {
             when (val result = updateGoalTargetUseCase(currentInput)) {
                 is UpdateGoalTargetResult.ValidationError -> {
-                    _uiState.update { it.copy(goalTargetError = result.message) }
+                    _uiState.update { it.copy(goalTargetError = result.reason) }
                 }
 
                 is UpdateGoalTargetResult.Success -> {
-                    refreshOverview()
                     _uiState.update {
                         it.copy(
                             isEditingGoalTarget = false,
@@ -155,15 +223,14 @@ class TrackerViewModel(
                     entryType = currentState.selectedType,
                     entrySource = currentState.selectedSource,
                     editingEntryId = currentState.editingEntryId,
-                    editingEntryRecordedOnEpochDay = currentState.editingEntryRecordedOnEpochDay
+                    recordedOnEpochDay = currentState.entryRecordedOnEpochDay
                 )
             ) {
                 is SaveCalorieEntryResult.ValidationError -> {
-                    _uiState.update { it.copy(inputError = result.message) }
+                    _uiState.update { it.copy(inputError = result.reason) }
                 }
 
                 SaveCalorieEntryResult.Success -> {
-                    refreshOverview()
                     clearEntryEditor()
                 }
             }
@@ -178,7 +245,7 @@ class TrackerViewModel(
                 selectedType = entry.type,
                 selectedSource = entry.source,
                 editingEntryId = entry.id,
-                editingEntryRecordedOnEpochDay = entry.recordedOnEpochDay,
+                entryRecordedOnEpochDay = entry.recordedOnEpochDay,
                 inputError = null,
                 pendingDeleteEntry = null
             )
@@ -192,7 +259,6 @@ class TrackerViewModel(
     fun deleteEntry(entryId: String) {
         viewModelScope.launch {
             deleteCalorieEntryUseCase(entryId)
-            refreshOverview()
             if (_uiState.value.editingEntryId == entryId) {
                 clearEntryEditor()
             }
@@ -247,35 +313,6 @@ class TrackerViewModel(
         deleteEntry(pendingEntry.id)
     }
 
-    private suspend fun refreshOverview() {
-        val targetCalories = loadGoalTargetUseCase()
-        val historyDays = loadCalorieHistoryUseCase()
-        val timelineTrend = loadCalorieTimelineTrendUseCase()
-        val overview = loadCalorieOverviewUseCase()
-        val weeklyTrend = loadWeeklyCalorieTrendUseCase()
-        val goalProgressInsights = calculateGoalProgressUseCase(
-            netCalories = overview.summary.netCalories,
-            weeklyTrend = weeklyTrend,
-            targetCalories = targetCalories
-        )
-        _uiState.update {
-            it.copy(
-                entries = overview.entries,
-                historyDays = historyDays,
-                timelineTrend = timelineTrend,
-                weeklyTrend = weeklyTrend,
-                goalProgressInsights = goalProgressInsights,
-                targetCalories = targetCalories,
-                currentEpochDay = LocalDate.now(clock).toEpochDay(),
-                selectedTrendWindowEndEpochDay = it.selectedTrendWindowEndEpochDay
-                    ?: LocalDate.now(clock).toEpochDay(),
-                totalIntake = overview.summary.totalIntake,
-                totalBurned = overview.summary.totalBurned,
-                netCalories = overview.summary.netCalories
-            )
-        }
-    }
-
     private fun clearEntryEditor() {
         _uiState.update {
             it.copy(
@@ -284,7 +321,7 @@ class TrackerViewModel(
                 selectedType = CalorieEntryType.INTAKE,
                 selectedSource = CalorieEntrySource.MEAL,
                 editingEntryId = null,
-                editingEntryRecordedOnEpochDay = null,
+                entryRecordedOnEpochDay = it.currentEpochDay,
                 inputError = null
             )
         }
@@ -306,69 +343,30 @@ class TrackerViewModel(
     }
 
     companion object {
-        fun factory(context: Context): ViewModelProvider.Factory = viewModelFactory {
+        fun factory(appContainer: TrackerAppContainer): ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                val database = Room.databaseBuilder(
-                    context.applicationContext,
-                    CalorieTrackerDatabase::class.java,
-                    TRACKER_DATABASE
-                ).addMigrations(
-                    CalorieTrackerDatabase.Migration1To2,
-                    CalorieTrackerDatabase.Migration2To3
-                ).build()
-                val repository = RoomCalorieEntryRepository(
-                    calorieEntryDao = database.calorieEntryDao(),
-                    legacyCalorieEntryStore = LegacyCalorieEntryStore(
-                        sharedPreferences = context.applicationContext.getSharedPreferences(
-                            LEGACY_TRACKER_PREFERENCES,
-                            Context.MODE_PRIVATE
-                        ),
-                        storageCodec = CalorieEntryStorageCodec()
-                    )
-                )
-                val goalTargetRepository = RoomGoalTargetRepository(
-                    goalSettingsDao = database.goalSettingsDao()
-                )
                 TrackerViewModel(
-                    saveCalorieEntryUseCase = SaveCalorieEntryUseCase(
-                        repository = repository,
-                        inputValidator = CalorieInputValidator(),
-                        clock = Clock.systemDefaultZone()
-                    ),
-                    deleteCalorieEntryUseCase = DeleteCalorieEntryUseCase(
-                        repository = repository
-                    ),
-                    loadCalorieHistoryUseCase = LoadCalorieHistoryUseCase(
-                        repository = repository,
-                        dailyCalorieCalculator = DailyCalorieCalculator()
-                    ),
-                    loadCalorieTimelineTrendUseCase = LoadCalorieTimelineTrendUseCase(
-                        repository = repository,
-                        dailyCalorieCalculator = DailyCalorieCalculator(),
-                        clock = Clock.systemDefaultZone()
-                    ),
-                    loadCalorieOverviewUseCase = LoadCalorieOverviewUseCase(
-                        repository = repository,
-                        dailyCalorieCalculator = DailyCalorieCalculator()
-                    ),
-                    loadWeeklyCalorieTrendUseCase = LoadWeeklyCalorieTrendUseCase(
-                        repository = repository,
-                        dailyCalorieCalculator = DailyCalorieCalculator(),
-                        clock = Clock.systemDefaultZone()
-                    ),
-                    loadGoalTargetUseCase = LoadGoalTargetUseCase(
-                        repository = goalTargetRepository
-                    ),
-                    updateGoalTargetUseCase = UpdateGoalTargetUseCase(
-                        repository = goalTargetRepository
-                    ),
-                    calculateGoalProgressUseCase = CalculateGoalProgressUseCase(),
-                    clock = Clock.systemDefaultZone()
+                    saveCalorieEntryUseCase = appContainer.saveCalorieEntryUseCase,
+                    deleteCalorieEntryUseCase = appContainer.deleteCalorieEntryUseCase,
+                    loadCalorieHistoryUseCase = appContainer.loadCalorieHistoryUseCase,
+                    loadCalorieTimelineTrendUseCase = appContainer.loadCalorieTimelineTrendUseCase,
+                    loadCalorieOverviewUseCase = appContainer.loadCalorieOverviewUseCase,
+                    loadWeeklyCalorieTrendUseCase = appContainer.loadWeeklyCalorieTrendUseCase,
+                    loadGoalTargetUseCase = appContainer.loadGoalTargetUseCase,
+                    updateGoalTargetUseCase = appContainer.updateGoalTargetUseCase,
+                    calculateGoalProgressUseCase = appContainer.calculateGoalProgressUseCase,
+                    clock = appContainer.clock
                 )
             }
         }
-
-        private const val TRACKER_DATABASE = "calorie_tracker.db"
-        private const val LEGACY_TRACKER_PREFERENCES = "calorie_tracker_preferences"
     }
 }
+
+private data class TrackerObservedState(
+    val overview: com.example.kalorientracker.domain.calorie.CalorieOverview,
+    val historyDays: List<com.example.kalorientracker.domain.calorie.CalorieHistoryDay>,
+    val timelineTrend: List<com.example.kalorientracker.domain.calorie.DailyCalorieTrendPoint>,
+    val weeklyTrend: List<com.example.kalorientracker.domain.calorie.DailyCalorieTrendPoint>,
+    val targetCalories: Int,
+    val goalProgressInsights: GoalProgressInsights
+)

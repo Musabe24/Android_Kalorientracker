@@ -12,21 +12,27 @@ package com.example.kalorientracker.domain.calorie
 class CalorieInputValidator {
     fun validate(rawValue: String): ValidationResult {
         if (rawValue.isBlank()) {
-            return ValidationResult.Invalid("Input must not be blank.")
+            return ValidationResult.Invalid(CalorieInputValidationError.Blank)
         }
 
         val parsedCalories = rawValue.toIntOrNull()
-            ?: return ValidationResult.Invalid("Input must be a whole number.")
+            ?: return ValidationResult.Invalid(CalorieInputValidationError.NotWholeNumber)
 
         if (parsedCalories <= 0) {
-            return ValidationResult.Invalid("Calories must be greater than zero.")
+            return ValidationResult.Invalid(CalorieInputValidationError.NonPositive)
         }
 
         return ValidationResult.Valid(parsedCalories)
     }
 }
 
+enum class CalorieInputValidationError {
+    Blank,
+    NotWholeNumber,
+    NonPositive
+}
+
 sealed interface ValidationResult {
     data class Valid(val calories: Int) : ValidationResult
-    data class Invalid(val reason: String) : ValidationResult
+    data class Invalid(val reason: CalorieInputValidationError) : ValidationResult
 }

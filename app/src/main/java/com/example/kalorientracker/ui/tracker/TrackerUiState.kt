@@ -1,11 +1,13 @@
 package com.example.kalorientracker.ui.tracker
 
 import com.example.kalorientracker.domain.calorie.CalorieEntry
+import com.example.kalorientracker.domain.calorie.CalorieInputValidationError
 import com.example.kalorientracker.domain.calorie.CalorieEntrySource
 import com.example.kalorientracker.domain.calorie.CalorieEntryType
 import com.example.kalorientracker.domain.calorie.CalorieHistoryDay
 import com.example.kalorientracker.domain.calorie.DailyCalorieTrendPoint
 import com.example.kalorientracker.domain.calorie.GoalProgressInsights
+import com.example.kalorientracker.domain.calorie.GoalTargetValidationError
 
 data class TrackerUiState(
     val dayNumber: Int = 1,
@@ -16,9 +18,9 @@ data class TrackerUiState(
     val goalProgressInsights: GoalProgressInsights? = null,
     val targetCalories: Int = 2200,
     val targetCaloriesInput: String = "",
-    val goalTargetError: String? = null,
     val isEditingGoalTarget: Boolean = false,
     val currentEpochDay: Long = 0,
+    val entryRecordedOnEpochDay: Long = 0,
     val selectedTrendRange: TrendRange = TrendRange.ThirtyDays,
     val selectedTrendWindowEndEpochDay: Long? = null,
     val selectedHistoryFilter: HistoryFilter = HistoryFilter.SevenDays,
@@ -28,8 +30,8 @@ data class TrackerUiState(
     val selectedType: CalorieEntryType = CalorieEntryType.INTAKE,
     val selectedSource: CalorieEntrySource = CalorieEntrySource.MEAL,
     val editingEntryId: String? = null,
-    val editingEntryRecordedOnEpochDay: Long? = null,
-    val inputError: String? = null,
+    val inputError: CalorieInputValidationError? = null,
+    val goalTargetError: GoalTargetValidationError? = null,
     val totalIntake: Int = 0,
     val totalBurned: Int = 0,
     val netCalories: Int = 0
@@ -42,6 +44,9 @@ data class TrackerUiState(
 
     val isEditing: Boolean
         get() = editingEntryId != null
+
+    val canMoveEntryDateForward: Boolean
+        get() = entryRecordedOnEpochDay < currentEpochDay
 
     val showsManualTypePicker: Boolean
         get() = selectedSource == CalorieEntrySource.MANUAL

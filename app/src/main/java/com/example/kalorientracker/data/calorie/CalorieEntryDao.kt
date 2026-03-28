@@ -4,11 +4,27 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CalorieEntryDao {
     @Query("SELECT * FROM calorie_entries ORDER BY recordedOnEpochDay ASC, id ASC")
+    fun observeAll(): Flow<List<CalorieEntryEntity>>
+
+    @Query("SELECT * FROM calorie_entries ORDER BY recordedOnEpochDay ASC, id ASC")
     suspend fun getAll(): List<CalorieEntryEntity>
+
+    @Query(
+        """
+        SELECT * FROM calorie_entries
+        WHERE recordedOnEpochDay BETWEEN :startEpochDayInclusive AND :endEpochDayInclusive
+        ORDER BY recordedOnEpochDay ASC, id ASC
+        """
+    )
+    fun observeBetween(
+        startEpochDayInclusive: Long,
+        endEpochDayInclusive: Long
+    ): Flow<List<CalorieEntryEntity>>
 
     @Query(
         """

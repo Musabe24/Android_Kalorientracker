@@ -5,14 +5,14 @@ class UpdateGoalTargetUseCase(
 ) {
     suspend operator fun invoke(rawTargetCalories: String): UpdateGoalTargetResult {
         if (rawTargetCalories.isBlank()) {
-            return UpdateGoalTargetResult.ValidationError("Target must not be blank.")
+            return UpdateGoalTargetResult.ValidationError(GoalTargetValidationError.Blank)
         }
 
         val targetCalories = rawTargetCalories.toIntOrNull()
-            ?: return UpdateGoalTargetResult.ValidationError("Target must be a whole number.")
+            ?: return UpdateGoalTargetResult.ValidationError(GoalTargetValidationError.NotWholeNumber)
 
         if (targetCalories <= 0) {
-            return UpdateGoalTargetResult.ValidationError("Target must be greater than zero.")
+            return UpdateGoalTargetResult.ValidationError(GoalTargetValidationError.NonPositive)
         }
 
         repository.setTargetCalories(targetCalories)
@@ -20,7 +20,13 @@ class UpdateGoalTargetUseCase(
     }
 }
 
+enum class GoalTargetValidationError {
+    Blank,
+    NotWholeNumber,
+    NonPositive
+}
+
 sealed interface UpdateGoalTargetResult {
     data class Success(val targetCalories: Int) : UpdateGoalTargetResult
-    data class ValidationError(val message: String) : UpdateGoalTargetResult
+    data class ValidationError(val reason: GoalTargetValidationError) : UpdateGoalTargetResult
 }

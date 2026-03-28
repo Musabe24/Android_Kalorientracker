@@ -1,5 +1,10 @@
 package com.example.kalorientracker.domain.calorie
 
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -14,20 +19,21 @@ class LoadCalorieOverviewUseCaseTest {
                     amount = 700,
                     type = CalorieEntryType.INTAKE,
                     source = CalorieEntrySource.MEAL,
-                    recordedOnEpochDay = 19810L
+                    recordedOnEpochDay = 20540L
                 ),
                 CalorieEntry(
                     id = "entry-2",
                     amount = 250,
                     type = CalorieEntryType.BURNED,
                     source = CalorieEntrySource.WATCH,
-                    recordedOnEpochDay = 19810L
+                    recordedOnEpochDay = 20540L
                 )
             )
         )
         val useCase = LoadCalorieOverviewUseCase(
             repository = repository,
-            dailyCalorieCalculator = DailyCalorieCalculator()
+            dailyCalorieCalculator = DailyCalorieCalculator(),
+            clock = Clock.fixed(Instant.parse("2026-03-28T10:15:30Z"), ZoneOffset.UTC)
         )
 
         val overview = useCase()
@@ -42,6 +48,8 @@ class LoadCalorieOverviewUseCaseTest {
 private class StaticCalorieEntryRepository(
     private val entries: List<CalorieEntry>
 ) : CalorieEntryRepository {
+    override fun observeEntries(): Flow<List<CalorieEntry>> = flowOf(entries)
+
     override suspend fun getEntries(): List<CalorieEntry> = entries
 
     override suspend fun getEntriesBetween(

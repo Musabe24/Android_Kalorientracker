@@ -1,5 +1,7 @@
 package com.example.kalorientracker.domain.calorie
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -51,6 +53,8 @@ class LoadCalorieHistoryUseCaseTest {
 private class HistoryRepository(
     private val entries: List<CalorieEntry>
 ) : CalorieEntryRepository {
+    override fun observeEntries(): Flow<List<CalorieEntry>> = flowOf(entries)
+
     override suspend fun getEntries(): List<CalorieEntry> = entries
 
     override suspend fun getEntriesBetween(
