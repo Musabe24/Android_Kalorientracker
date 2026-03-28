@@ -5,9 +5,19 @@ import com.example.kalorientracker.domain.calorie.CalorieEntryType
 import com.example.kalorientracker.ui.home.GreetingViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GreetingViewModelTest {
+    @Test
+    fun `view model starts with first day`() {
+        val viewModel = GreetingViewModel()
+
+        val uiState = viewModel.uiState.value
+        assertEquals(1, uiState.dayNumber)
+        assertTrue(uiState.entries.isEmpty())
+    }
+
     @Test
     fun `add entry updates summary for intake`() {
         val viewModel = GreetingViewModel()
