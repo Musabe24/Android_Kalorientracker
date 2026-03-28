@@ -7,18 +7,24 @@ class DailyCalorieCalculatorTest {
     private val calculator = DailyCalorieCalculator()
 
     @Test
-    fun `total calories sums up all entries`() {
-        val entries = listOf(MealEntry(400), MealEntry(550), MealEntry(150))
+    fun `calculate summary returns intake burned and net totals`() {
+        val entries = listOf(
+            CalorieEntry(amount = 400, type = CalorieEntryType.INTAKE),
+            CalorieEntry(amount = 550, type = CalorieEntryType.INTAKE),
+            CalorieEntry(amount = 300, type = CalorieEntryType.BURNED)
+        )
 
-        val totalCalories = calculator.totalCalories(entries)
+        val summary = calculator.calculateSummary(entries)
 
-        assertEquals(1100, totalCalories)
+        assertEquals(950, summary.totalIntake)
+        assertEquals(300, summary.totalBurned)
+        assertEquals(650, summary.netCalories)
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun `total calories throws when entry has negative calories`() {
-        val entries = listOf(MealEntry(300), MealEntry(-20))
+    fun `calculate summary throws when entry has zero calories`() {
+        val entries = listOf(CalorieEntry(amount = 0, type = CalorieEntryType.INTAKE))
 
-        calculator.totalCalories(entries)
+        calculator.calculateSummary(entries)
     }
 }

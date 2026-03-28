@@ -1,4 +1,19 @@
 <resources>
     <string name="app_name">Kalorientracker</string>
-    <string name="greeting_message">Hello %1$s!</string>
+    <string name="summary_title">Daily summary</string>
+    <string name="total_intake_template">Intake: %1$d kcal</string>
+    <string name="total_burned_template">Burned: %1$d kcal</string>
+    <string name="net_calories_template">Net: %1$d kcal</string>
+    <string name="calorie_input_label">Calories</string>
+    <string name="entry_type_title">Entry type</string>
+    <string name="entry_type_intake">Intake</string>
+    <string name="entry_type_burned">Burned</string>
+    <string name="entry_source_title">Source</string>
+    <string name="entry_source_meal">Meal</string>
+    <string name="entry_source_watch">Watch</string>
+    <string name="entry_source_manual">Manual</string>
+    <string name="add_entry_button">Add entry</string>
+    <string name="entry_list_title">Entries</string>
+    <string name="entry_index_template">Entry #%1$d</string>
+    <string name="entry_calories_template">%1$d kcal</string>
 </resources>
