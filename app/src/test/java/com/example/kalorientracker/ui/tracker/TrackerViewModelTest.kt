@@ -11,6 +11,7 @@ import com.example.kalorientracker.domain.calorie.DeleteCalorieEntryUseCase
 import com.example.kalorientracker.domain.calorie.GoalTargetRepository
 import com.example.kalorientracker.domain.calorie.LoadCalorieHistoryUseCase
 import com.example.kalorientracker.domain.calorie.LoadCalorieOverviewUseCase
+import com.example.kalorientracker.domain.calorie.LoadCalorieTimelineTrendUseCase
 import com.example.kalorientracker.domain.calorie.LoadGoalTargetUseCase
 import com.example.kalorientracker.domain.calorie.LoadWeeklyCalorieTrendUseCase
 import com.example.kalorientracker.domain.calorie.SaveCalorieEntryUseCase
@@ -45,6 +46,7 @@ class TrackerViewModelTest {
         assertEquals(1, uiState.dayNumber)
         assertTrue(uiState.entries.isEmpty())
         assertTrue(uiState.historyDays.isEmpty())
+        assertTrue(uiState.timelineTrend.isEmpty())
         assertEquals(7, uiState.weeklyTrend.size)
         assertNotNull(uiState.goalProgressInsights)
     }
@@ -236,6 +238,95 @@ class TrackerViewModelTest {
     }
 
     @Test
+    fun `select trend range expands the visible timeline`() = runTest {
+        val repository = InMemoryCalorieEntryRepository(
+            entries = mutableListOf(
+                CalorieEntry(
+                    id = "entry-1",
+                    amount = 120,
+                    type = CalorieEntryType.INTAKE,
+                    source = CalorieEntrySource.MEAL,
+                    recordedOnEpochDay = 20510L
+                ),
+                CalorieEntry(
+                    id = "entry-2",
+                    amount = 240,
+                    type = CalorieEntryType.INTAKE,
+                    source = CalorieEntrySource.MEAL,
+                    recordedOnEpochDay = 20540L
+                )
+            )
+        )
+        val viewModel = createViewModel(repository)
+
+        advanceUntilIdle()
+        assertEquals(30, viewModel.uiState.value.visibleTrendPoints.size)
+
+        viewModel.selectTrendRange(TrendRange.AllTime)
+        assertEquals(31, viewModel.uiState.value.visibleTrendPoints.size)
+
+        viewModel.selectTrendRange(TrendRange.SevenDays)
+        assertEquals(7, viewModel.uiState.value.visibleTrendPoints.size)
+    }
+
+    @Test
+    fun `trend window navigation stays disabled when the timeline is empty`() = runTest {
+        val viewModel = createViewModel()
+
+        advanceUntilIdle()
+        viewModel.selectTrendRange(TrendRange.SevenDays)
+
+        val initialState = viewModel.uiState.value
+        assertTrue(initialState.visibleTrendPoints.isEmpty())
+        assertFalse(initialState.canNavigateToEarlierTrendWindow)
+        assertFalse(initialState.canNavigateToLaterTrendWindow)
+
+        viewModel.showEarlierTrendWindow()
+        viewModel.showLaterTrendWindow()
+
+        val updatedState = viewModel.uiState.value
+        assertTrue(updatedState.visibleTrendPoints.isEmpty())
+        assertFalse(updatedState.canNavigateToEarlierTrendWindow)
+        assertFalse(updatedState.canNavigateToLaterTrendWindow)
+    }
+
+    @Test
+    fun `trend window navigation can move to earlier and later weeks`() = runTest {
+        val repository = InMemoryCalorieEntryRepository(
+            entries = mutableListOf(
+                CalorieEntry(
+                    id = "entry-1",
+                    amount = 120,
+                    type = CalorieEntryType.INTAKE,
+                    source = CalorieEntrySource.MEAL,
+                    recordedOnEpochDay = 20520L
+                ),
+                CalorieEntry(
+                    id = "entry-2",
+                    amount = 240,
+                    type = CalorieEntryType.INTAKE,
+                    source = CalorieEntrySource.MEAL,
+                    recordedOnEpochDay = 20540L
+                )
+            )
+        )
+        val viewModel = createViewModel(repository)
+
+        advanceUntilIdle()
+        viewModel.selectTrendRange(TrendRange.SevenDays)
+        assertEquals(20534L, viewModel.uiState.value.visibleTrendPoints.first().epochDay)
+        assertTrue(viewModel.uiState.value.canNavigateToEarlierTrendWindow)
+        assertFalse(viewModel.uiState.value.canNavigateToLaterTrendWindow)
+
+        viewModel.showEarlierTrendWindow()
+        assertEquals(20527L, viewModel.uiState.value.visibleTrendPoints.first().epochDay)
+        assertTrue(viewModel.uiState.value.canNavigateToLaterTrendWindow)
+
+        viewModel.showLaterTrendWindow()
+        assertEquals(20534L, viewModel.uiState.value.visibleTrendPoints.first().epochDay)
+    }
+
+    @Test
     fun `selecting meal or activity source infers the matching calorie direction`() = runTest {
         val viewModel = createViewModel()
 
@@ -311,6 +402,11 @@ class TrackerViewModelTest {
             loadCalorieHistoryUseCase = LoadCalorieHistoryUseCase(
                 repository = repository,
                 dailyCalorieCalculator = DailyCalorieCalculator()
+            ),
+            loadCalorieTimelineTrendUseCase = LoadCalorieTimelineTrendUseCase(
+                repository = repository,
+                dailyCalorieCalculator = DailyCalorieCalculator(),
+                clock = Clock.fixed(Instant.parse("2026-03-28T10:15:30Z"), ZoneOffset.UTC)
             ),
             loadCalorieOverviewUseCase = LoadCalorieOverviewUseCase(
                 repository = repository,

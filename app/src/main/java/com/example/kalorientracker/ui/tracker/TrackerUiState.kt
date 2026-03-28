@@ -12,12 +12,15 @@ data class TrackerUiState(
     val entries: List<CalorieEntry> = emptyList(),
     val historyDays: List<CalorieHistoryDay> = emptyList(),
     val weeklyTrend: List<DailyCalorieTrendPoint> = emptyList(),
+    val timelineTrend: List<DailyCalorieTrendPoint> = emptyList(),
     val goalProgressInsights: GoalProgressInsights? = null,
     val targetCalories: Int = 2200,
     val targetCaloriesInput: String = "",
     val goalTargetError: String? = null,
     val isEditingGoalTarget: Boolean = false,
     val currentEpochDay: Long = 0,
+    val selectedTrendRange: TrendRange = TrendRange.ThirtyDays,
+    val selectedTrendWindowEndEpochDay: Long? = null,
     val selectedHistoryFilter: HistoryFilter = HistoryFilter.SevenDays,
     val pendingDeleteEntry: CalorieEntry? = null,
     val entryNameInput: String = "",
@@ -43,6 +46,40 @@ data class TrackerUiState(
     val showsManualTypePicker: Boolean
         get() = selectedSource == CalorieEntrySource.MANUAL
 
+    val visibleTrendWindowDays: Int?
+        get() = when (selectedTrendRange) {
+            TrendRange.SevenDays -> 7
+            TrendRange.ThirtyDays -> 30
+            TrendRange.AllTime -> null
+        }
+
+    val effectiveTrendWindowEndEpochDay: Long
+        get() = (selectedTrendWindowEndEpochDay ?: currentEpochDay).coerceAtMost(currentEpochDay)
+
+    val visibleTrendPoints: List<DailyCalorieTrendPoint>
+        get() = when (selectedTrendRange) {
+            TrendRange.SevenDays,
+            TrendRange.ThirtyDays -> {
+                val windowDays = visibleTrendWindowDays ?: return emptyList()
+                val startEpochDay = effectiveTrendWindowEndEpochDay - windowDays + 1L
+                timelineTrend.filter { it.epochDay in startEpochDay..effectiveTrendWindowEndEpochDay }
+            }
+            TrendRange.AllTime -> timelineTrend
+        }
+
+    val canNavigateToEarlierTrendWindow: Boolean
+        get() {
+            val earliestTimelineEpochDay = timelineTrend.firstOrNull()?.epochDay ?: return false
+            return visibleTrendWindowDays != null &&
+                visibleTrendPoints.isNotEmpty() &&
+                visibleTrendPoints.first().epochDay > earliestTimelineEpochDay
+        }
+
+    val canNavigateToLaterTrendWindow: Boolean
+        get() = visibleTrendWindowDays != null &&
+            visibleTrendPoints.isNotEmpty() &&
+            visibleTrendPoints.last().epochDay < currentEpochDay
+
     val filteredHistoryDays: List<CalorieHistoryDay>
         get() = when (selectedHistoryFilter) {
             HistoryFilter.Today -> historyDays.filter { it.epochDay == currentEpochDay }
@@ -54,5 +91,11 @@ data class TrackerUiState(
 enum class HistoryFilter {
     Today,
     SevenDays,
+    AllTime
+}
+
+enum class TrendRange {
+    SevenDays,
+    ThirtyDays,
     AllTime
 }

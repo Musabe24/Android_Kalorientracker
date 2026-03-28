@@ -88,6 +88,9 @@ fun TrackerScreen(viewModel: TrackerViewModel, modifier: Modifier = Modifier) {
         onEditEntryClicked = viewModel::startEditing,
         onDeleteEntryClicked = viewModel::requestDeleteEntry,
         onCancelEditingClicked = viewModel::cancelEditing,
+        onTrendRangeSelected = viewModel::selectTrendRange,
+        onEarlierTrendWindowSelected = viewModel::showEarlierTrendWindow,
+        onLaterTrendWindowSelected = viewModel::showLaterTrendWindow,
         onHistoryFilterSelected = viewModel::selectHistoryFilter,
         onDismissDeleteDialog = viewModel::dismissDeleteEntry,
         onConfirmDeleteEntry = viewModel::confirmDeleteEntry,
@@ -110,6 +113,9 @@ fun TrackerContent(
     onEditEntryClicked: (CalorieEntry) -> Unit,
     onDeleteEntryClicked: (CalorieEntry) -> Unit,
     onCancelEditingClicked: () -> Unit,
+    onTrendRangeSelected: (TrendRange) -> Unit,
+    onEarlierTrendWindowSelected: () -> Unit,
+    onLaterTrendWindowSelected: () -> Unit,
     onHistoryFilterSelected: (HistoryFilter) -> Unit,
     onDismissDeleteDialog: () -> Unit,
     onConfirmDeleteEntry: () -> Unit,
@@ -171,7 +177,12 @@ fun TrackerContent(
             }
 
             item {
-                WeeklyTrendSection(uiState = uiState)
+                TrendSection(
+                    uiState = uiState,
+                    onTrendRangeSelected = onTrendRangeSelected,
+                    onEarlierTrendWindowSelected = onEarlierTrendWindowSelected,
+                    onLaterTrendWindowSelected = onLaterTrendWindowSelected
+                )
             }
 
             item {
@@ -616,7 +627,12 @@ private fun GoalMetric(
 }
 
 @Composable
-private fun WeeklyTrendSection(uiState: TrackerUiState) {
+private fun TrendSection(
+    uiState: TrackerUiState,
+    onTrendRangeSelected: (TrendRange) -> Unit,
+    onEarlierTrendWindowSelected: () -> Unit,
+    onLaterTrendWindowSelected: () -> Unit
+) {
     Card(
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = trackerCardColor()),
@@ -632,22 +648,102 @@ private fun WeeklyTrendSection(uiState: TrackerUiState) {
                 subtitle = stringResource(R.string.weekly_trend_subtitle)
             )
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 164.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.Bottom
-            ) {
-                val maxNet = uiState.weeklyTrend.maxOfOrNull { abs(it.netCalories) }?.coerceAtLeast(1) ?: 1
-                uiState.weeklyTrend.forEach { point ->
-                    WeeklyTrendBar(
-                        modifier = Modifier.weight(1f),
-                        point = point,
-                        maxNet = maxNet
-                    )
+            TrendRangeFilterRow(
+                selectedRange = uiState.selectedTrendRange,
+                onTrendRangeSelected = onTrendRangeSelected
+            )
+
+            if (uiState.selectedTrendRange != TrendRange.AllTime && uiState.visibleTrendPoints.isNotEmpty()) {
+                TrendWindowNavigationRow(
+                    uiState = uiState,
+                    onEarlierTrendWindowSelected = onEarlierTrendWindowSelected,
+                    onLaterTrendWindowSelected = onLaterTrendWindowSelected
+                )
+            }
+
+            if (uiState.visibleTrendPoints.isEmpty()) {
+                EmptyTrendState()
+            } else {
+                val visibleTrendPoints = uiState.visibleTrendPoints
+                val maxNet = visibleTrendPoints.maxOfOrNull { abs(it.netCalories) }?.coerceAtLeast(1) ?: 1
+
+                Row(
+                    modifier = Modifier
+                        .horizontalScroll(rememberScrollState())
+                        .heightIn(min = 164.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    visibleTrendPoints.forEach { point ->
+                        TrendBar(
+                            point = point,
+                            maxNet = maxNet,
+                            isCondensed = visibleTrendPoints.size > 14
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun TrendWindowNavigationRow(
+    uiState: TrackerUiState,
+    onEarlierTrendWindowSelected: () -> Unit,
+    onLaterTrendWindowSelected: () -> Unit
+) {
+    val firstPoint = uiState.visibleTrendPoints.first()
+    val lastPoint = uiState.visibleTrendPoints.last()
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TextButton(
+            onClick = onEarlierTrendWindowSelected,
+            enabled = uiState.canNavigateToEarlierTrendWindow
+        ) {
+            Text(text = stringResource(R.string.trend_navigation_earlier))
+        }
+        Text(
+            text = trendWindowLabel(firstPoint.epochDay, lastPoint.epochDay),
+            style = MaterialTheme.typography.bodyMedium,
+            color = trackerPrimaryTextColor(),
+            textAlign = TextAlign.Center
+        )
+        TextButton(
+            onClick = onLaterTrendWindowSelected,
+            enabled = uiState.canNavigateToLaterTrendWindow
+        ) {
+            Text(text = stringResource(R.string.trend_navigation_later))
+        }
+    }
+}
+
+@Composable
+private fun TrendRangeFilterRow(
+    selectedRange: TrendRange,
+    onTrendRangeSelected: (TrendRange) -> Unit
+) {
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        listOf(
+            TrendRange.SevenDays to stringResource(R.string.trend_range_seven_days),
+            TrendRange.ThirtyDays to stringResource(R.string.trend_range_thirty_days),
+            TrendRange.AllTime to stringResource(R.string.trend_range_all_time)
+        ).forEach { (range, label) ->
+            SelectionChip(
+                option = SelectionOption(
+                    label = label,
+                    selected = selectedRange == range,
+                    accent = Ink,
+                    onClick = { onTrendRangeSelected(range) }
+                )
+            )
         }
     }
 }
@@ -679,17 +775,18 @@ private fun HistoryFilterRow(
 }
 
 @Composable
-private fun WeeklyTrendBar(
-    modifier: Modifier = Modifier,
+private fun TrendBar(
     point: DailyCalorieTrendPoint,
-    maxNet: Int
+    maxNet: Int,
+    isCondensed: Boolean
 ) {
     val net = point.netCalories
     val accent = if (net >= 0) Olive else Coral
     val fillFraction = (abs(net).toFloat() / maxNet.toFloat()).coerceIn(0.14f, 1f)
+    val barWidth = if (isCondensed) 24.dp else 38.dp
 
     Column(
-        modifier = modifier,
+        modifier = Modifier.width(barWidth),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -720,10 +817,28 @@ private fun WeeklyTrendBar(
             )
         }
         Text(
-            text = LocalDate.ofEpochDay(point.epochDay).format(weekDayFormatter()),
+            text = LocalDate.ofEpochDay(point.epochDay).format(
+                if (isCondensed) compactTrendDayFormatter() else weekDayFormatter()
+            ),
             style = MaterialTheme.typography.bodySmall,
             color = trackerPrimaryTextColor(),
             fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+@Composable
+private fun EmptyTrendState() {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = stringResource(R.string.trend_empty_title),
+            style = MaterialTheme.typography.titleMedium,
+            color = trackerPrimaryTextColor()
+        )
+        Text(
+            text = stringResource(R.string.trend_empty_message),
+            style = MaterialTheme.typography.bodyMedium,
+            color = trackerSecondaryTextColor()
         )
     }
 }
@@ -1280,6 +1395,18 @@ private fun TrackerContentPreview() {
                     DailyCalorieTrendPoint(20539L, 2450, 400, 2050),
                     DailyCalorieTrendPoint(20540L, 650, 420, 230)
                 ),
+                timelineTrend = listOf(
+                    DailyCalorieTrendPoint(20512L, 1500, 200, 1300),
+                    DailyCalorieTrendPoint(20520L, 1950, 240, 1710),
+                    DailyCalorieTrendPoint(20528L, 1800, 300, 1500),
+                    DailyCalorieTrendPoint(20534L, 1800, 200, 1600),
+                    DailyCalorieTrendPoint(20535L, 2100, 250, 1850),
+                    DailyCalorieTrendPoint(20536L, 1950, 300, 1650),
+                    DailyCalorieTrendPoint(20537L, 2300, 350, 1950),
+                    DailyCalorieTrendPoint(20538L, 1600, 180, 1420),
+                    DailyCalorieTrendPoint(20539L, 2450, 400, 2050),
+                    DailyCalorieTrendPoint(20540L, 650, 420, 230)
+                ),
                 totalIntake = 650,
                 totalBurned = 420,
                 netCalories = 230
@@ -1292,6 +1419,9 @@ private fun TrackerContentPreview() {
             onEditEntryClicked = {},
             onDeleteEntryClicked = {},
             onCancelEditingClicked = {},
+            onTrendRangeSelected = {},
+            onEarlierTrendWindowSelected = {},
+            onLaterTrendWindowSelected = {},
             onHistoryFilterSelected = {},
             onDismissDeleteDialog = {},
             onConfirmDeleteEntry = {},
@@ -1371,6 +1501,21 @@ private fun sourceLabel(source: CalorieEntrySource): String {
 
 private fun weekDayFormatter(): DateTimeFormatter {
     return DateTimeFormatter.ofPattern("EEE", Locale.getDefault())
+}
+
+private fun compactTrendDayFormatter(): DateTimeFormatter {
+    return DateTimeFormatter.ofPattern("MM/dd", Locale.getDefault())
+}
+
+private fun trendWindowFormatter(): DateTimeFormatter {
+    return DateTimeFormatter.ofPattern("MMM d", Locale.getDefault())
+}
+
+private fun trendWindowLabel(startEpochDay: Long, endEpochDay: Long): String {
+    val formatter = trendWindowFormatter()
+    val start = LocalDate.ofEpochDay(startEpochDay).format(formatter)
+    val end = LocalDate.ofEpochDay(endEpochDay).format(formatter)
+    return "$start - $end"
 }
 
 private fun historyDateFormatter(): DateTimeFormatter {

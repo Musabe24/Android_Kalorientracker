@@ -64,7 +64,9 @@ fun KalorientrackerTheme(
     if (view is Activity) {
         SideEffect {
             val window = view.window
+            @Suppress("DEPRECATION")
             window.statusBarColor = colorScheme.background.toArgb()
+            @Suppress("DEPRECATION")
             window.navigationBarColor = colorScheme.background.toArgb()
             WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = !darkTheme
             WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightNavigationBars = !darkTheme

@@ -21,6 +21,7 @@ import com.example.kalorientracker.domain.calorie.DailyCalorieCalculator
 import com.example.kalorientracker.domain.calorie.DeleteCalorieEntryUseCase
 import com.example.kalorientracker.domain.calorie.LoadGoalTargetUseCase
 import com.example.kalorientracker.domain.calorie.LoadCalorieHistoryUseCase
+import com.example.kalorientracker.domain.calorie.LoadCalorieTimelineTrendUseCase
 import com.example.kalorientracker.domain.calorie.LoadCalorieOverviewUseCase
 import com.example.kalorientracker.domain.calorie.LoadWeeklyCalorieTrendUseCase
 import com.example.kalorientracker.domain.calorie.SaveCalorieEntryResult
@@ -39,6 +40,7 @@ class TrackerViewModel(
     private val saveCalorieEntryUseCase: SaveCalorieEntryUseCase,
     private val deleteCalorieEntryUseCase: DeleteCalorieEntryUseCase,
     private val loadCalorieHistoryUseCase: LoadCalorieHistoryUseCase,
+    private val loadCalorieTimelineTrendUseCase: LoadCalorieTimelineTrendUseCase,
     private val loadCalorieOverviewUseCase: LoadCalorieOverviewUseCase,
     private val loadWeeklyCalorieTrendUseCase: LoadWeeklyCalorieTrendUseCase,
     private val loadGoalTargetUseCase: LoadGoalTargetUseCase,
@@ -201,6 +203,36 @@ class TrackerViewModel(
         _uiState.update { it.copy(selectedHistoryFilter = filter) }
     }
 
+    fun selectTrendRange(range: TrendRange) {
+        _uiState.update {
+            it.copy(
+                selectedTrendRange = range,
+                selectedTrendWindowEndEpochDay = it.currentEpochDay
+            )
+        }
+    }
+
+    fun showEarlierTrendWindow() {
+        _uiState.update { currentState ->
+            val windowDays = currentState.visibleTrendWindowDays ?: return@update currentState
+            val earliestEpochDay = currentState.timelineTrend.firstOrNull()?.epochDay ?: return@update currentState
+            val nextEndEpochDay = (currentState.effectiveTrendWindowEndEpochDay - windowDays)
+                .coerceAtLeast(earliestEpochDay + windowDays - 1L)
+
+            currentState.copy(selectedTrendWindowEndEpochDay = nextEndEpochDay)
+        }
+    }
+
+    fun showLaterTrendWindow() {
+        _uiState.update { currentState ->
+            val windowDays = currentState.visibleTrendWindowDays ?: return@update currentState
+            val nextEndEpochDay = (currentState.effectiveTrendWindowEndEpochDay + windowDays)
+                .coerceAtMost(currentState.currentEpochDay)
+
+            currentState.copy(selectedTrendWindowEndEpochDay = nextEndEpochDay)
+        }
+    }
+
     fun requestDeleteEntry(entry: CalorieEntry) {
         _uiState.update { it.copy(pendingDeleteEntry = entry) }
     }
@@ -218,6 +250,7 @@ class TrackerViewModel(
     private suspend fun refreshOverview() {
         val targetCalories = loadGoalTargetUseCase()
         val historyDays = loadCalorieHistoryUseCase()
+        val timelineTrend = loadCalorieTimelineTrendUseCase()
         val overview = loadCalorieOverviewUseCase()
         val weeklyTrend = loadWeeklyCalorieTrendUseCase()
         val goalProgressInsights = calculateGoalProgressUseCase(
@@ -229,10 +262,13 @@ class TrackerViewModel(
             it.copy(
                 entries = overview.entries,
                 historyDays = historyDays,
+                timelineTrend = timelineTrend,
                 weeklyTrend = weeklyTrend,
                 goalProgressInsights = goalProgressInsights,
                 targetCalories = targetCalories,
                 currentEpochDay = LocalDate.now(clock).toEpochDay(),
+                selectedTrendWindowEndEpochDay = it.selectedTrendWindowEndEpochDay
+                    ?: LocalDate.now(clock).toEpochDay(),
                 totalIntake = overview.summary.totalIntake,
                 totalBurned = overview.summary.totalBurned,
                 netCalories = overview.summary.netCalories
@@ -305,6 +341,11 @@ class TrackerViewModel(
                     loadCalorieHistoryUseCase = LoadCalorieHistoryUseCase(
                         repository = repository,
                         dailyCalorieCalculator = DailyCalorieCalculator()
+                    ),
+                    loadCalorieTimelineTrendUseCase = LoadCalorieTimelineTrendUseCase(
+                        repository = repository,
+                        dailyCalorieCalculator = DailyCalorieCalculator(),
+                        clock = Clock.systemDefaultZone()
                     ),
                     loadCalorieOverviewUseCase = LoadCalorieOverviewUseCase(
                         repository = repository,

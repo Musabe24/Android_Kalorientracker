@@ -16,8 +16,8 @@ abstract class CalorieTrackerDatabase : RoomDatabase() {
 
     companion object {
         val Migration1To2 = object : Migration(1, 2) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS goal_settings (
                         id INTEGER NOT NULL,
@@ -26,15 +26,15 @@ abstract class CalorieTrackerDatabase : RoomDatabase() {
                     )
                     """.trimIndent()
                 )
-                database.execSQL(
+                db.execSQL(
                     "INSERT OR IGNORE INTO goal_settings (id, targetCalories) VALUES (1, 2200)"
                 )
             }
         }
 
         val Migration2To3 = object : Migration(2, 3) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
                     """
                     ALTER TABLE calorie_entries
                     ADD COLUMN name TEXT NOT NULL DEFAULT ''

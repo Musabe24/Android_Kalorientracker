@@ -116,6 +116,26 @@ esac
 
 CLASSPATH="\\\"\\\""
 
+set_java_home_from_known_locations() {
+    if [ -n "$JAVA_HOME" ]; then
+        return
+    fi
+
+    for candidate in \
+        "$HOME/.local/opt/android-studio/jbr" \
+        "/opt/android-studio/jbr" \
+        "/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+    do
+        if [ -x "$candidate/bin/java" ]; then
+            JAVA_HOME=$candidate
+            export JAVA_HOME
+            return
+        fi
+    done
+}
+
+set_java_home_from_known_locations
+
 
 # Determine the Java command to use to start the JVM.
 if [ -n "$JAVA_HOME" ] ; then
