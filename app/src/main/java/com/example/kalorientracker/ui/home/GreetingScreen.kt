@@ -118,6 +118,11 @@ private fun SummarySection(uiState: GreetingUiState) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
+                text = stringResource(R.string.day_title_template, uiState.dayNumber),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
                 text = stringResource(R.string.summary_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold

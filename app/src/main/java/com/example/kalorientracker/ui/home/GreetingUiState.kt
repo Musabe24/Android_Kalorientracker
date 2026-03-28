@@ -5,6 +5,7 @@ import com.example.kalorientracker.domain.calorie.CalorieEntrySource
 import com.example.kalorientracker.domain.calorie.CalorieEntryType
 
 data class GreetingUiState(
+    val dayNumber: Int = 1,
     val entries: List<CalorieEntry> = emptyList(),
     val calorieInput: String = "",
     val selectedType: CalorieEntryType = CalorieEntryType.INTAKE,
