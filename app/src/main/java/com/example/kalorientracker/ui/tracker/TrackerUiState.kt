@@ -27,11 +27,16 @@ data class TrackerUiState(
     val selectedHistoryFilter: HistoryFilter = HistoryFilter.SevenDays,
     val pendingDeleteEntry: CalorieEntry? = null,
     val entryNameInput: String = "",
+    val entryInputMode: EntryInputMode = EntryInputMode.DirectCalories,
     val calorieInput: String = "",
+    val consumedAmountInput: String = "",
+    val caloriesPer100Input: String = "",
     val selectedType: CalorieEntryType = CalorieEntryType.INTAKE,
     val selectedSource: CalorieEntrySource = CalorieEntrySource.MEAL,
     val editingEntryId: String? = null,
     val inputError: CalorieInputValidationError? = null,
+    val consumedAmountInputError: CalorieInputValidationError? = null,
+    val caloriesPer100InputError: CalorieInputValidationError? = null,
     val goalTargetError: GoalTargetValidationError? = null,
     val totalIntake: Int = 0,
     val totalBurned: Int = 0,
@@ -39,6 +44,17 @@ data class TrackerUiState(
 ) {
     val hasEntries: Boolean
         get() = entries.isNotEmpty()
+
+    val calculatedCaloriesPreview: Int?
+        get() {
+            val consumedAmount = consumedAmountInput.toIntOrNull()
+            val caloriesPer100 = caloriesPer100Input.toIntOrNull()
+            if (consumedAmount == null || caloriesPer100 == null || consumedAmount <= 0 || caloriesPer100 <= 0) {
+                return null
+            }
+
+            return kotlin.math.round(consumedAmount * caloriesPer100 / 100.0).toInt()
+        }
 
     val hasHistory: Boolean
         get() = filteredHistoryDays.isNotEmpty()
@@ -51,6 +67,12 @@ data class TrackerUiState(
 
     val showsManualTypePicker: Boolean
         get() = selectedSource == CalorieEntrySource.MANUAL
+
+    val usesDirectCalorieInput: Boolean
+        get() = entryInputMode == EntryInputMode.DirectCalories
+
+    val usesPortionCalculator: Boolean
+        get() = entryInputMode == EntryInputMode.PortionCalculator
 
     val visibleTrendWindowDays: Int?
         get() = when (selectedTrendRange) {
@@ -110,4 +132,9 @@ enum class TrendRange {
     SevenDays,
     ThirtyDays,
     AllTime
+}
+
+enum class EntryInputMode {
+    DirectCalories,
+    PortionCalculator
 }

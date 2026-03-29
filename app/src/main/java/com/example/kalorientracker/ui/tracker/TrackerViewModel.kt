@@ -18,9 +18,10 @@ import com.example.kalorientracker.domain.calorie.LoadCalorieOverviewUseCase
 import com.example.kalorientracker.domain.calorie.LoadCalorieTimelineTrendUseCase
 import com.example.kalorientracker.domain.calorie.LoadGoalTargetUseCase
 import com.example.kalorientracker.domain.calorie.LoadWeeklyCalorieTrendUseCase
+import com.example.kalorientracker.domain.calorie.PortionCalorieCalculationResult
+import com.example.kalorientracker.domain.calorie.PortionCalorieCalculator
 import com.example.kalorientracker.domain.calorie.SaveCalorieEntryResult
 import com.example.kalorientracker.domain.calorie.SaveCalorieEntryUseCase
-import com.example.kalorientracker.domain.calorie.CalorieInputValidationError
 import com.example.kalorientracker.domain.calorie.UpdateGoalTargetResult
 import com.example.kalorientracker.domain.calorie.UpdateGoalTargetUseCase
 import java.time.Clock
@@ -42,6 +43,7 @@ class TrackerViewModel(
     private val loadGoalTargetUseCase: LoadGoalTargetUseCase,
     private val updateGoalTargetUseCase: UpdateGoalTargetUseCase,
     private val calculateGoalProgressUseCase: CalculateGoalProgressUseCase,
+    private val portionCalorieCalculator: PortionCalorieCalculator,
     private val clock: Clock
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(
@@ -104,6 +106,37 @@ class TrackerViewModel(
             it.copy(
                 calorieInput = value,
                 inputError = null
+            )
+        }
+    }
+
+    fun onEntryInputModeSelected(mode: EntryInputMode) {
+        _uiState.update { currentState ->
+            currentState.copy(
+                entryInputMode = mode,
+                inputError = null,
+                consumedAmountInputError = null,
+                caloriesPer100InputError = null
+            )
+        }
+    }
+
+    fun onConsumedAmountInputChanged(value: String) {
+        _uiState.update {
+            it.copy(
+                consumedAmountInput = value,
+                consumedAmountInputError = null,
+                caloriesPer100InputError = null
+            )
+        }
+    }
+
+    fun onCaloriesPer100InputChanged(value: String) {
+        _uiState.update {
+            it.copy(
+                caloriesPer100Input = value,
+                consumedAmountInputError = null,
+                caloriesPer100InputError = null
             )
         }
     }
@@ -220,11 +253,38 @@ class TrackerViewModel(
 
     fun saveEntry() {
         val currentState = _uiState.value
+        val rawCalories = when (currentState.entryInputMode) {
+            EntryInputMode.DirectCalories -> currentState.calorieInput
+            EntryInputMode.PortionCalculator -> {
+                when (
+                    val calculationResult = portionCalorieCalculator.calculate(
+                        rawConsumedAmount = currentState.consumedAmountInput,
+                        rawCaloriesPer100Units = currentState.caloriesPer100Input
+                    )
+                ) {
+                    is PortionCalorieCalculationResult.Invalid -> {
+                        _uiState.update {
+                            it.copy(
+                                inputError = null,
+                                consumedAmountInputError = calculationResult.errors.consumedAmountError,
+                                caloriesPer100InputError = calculationResult.errors.caloriesPer100UnitsError
+                            )
+                        }
+                        return
+                    }
+
+                    is PortionCalorieCalculationResult.Valid -> {
+                        calculationResult.calories.toString()
+                    }
+                }
+            }
+        }
+
         viewModelScope.launch {
             when (
                 val result = saveCalorieEntryUseCase(
                     rawName = currentState.entryNameInput,
-                    rawCalories = currentState.calorieInput,
+                    rawCalories = rawCalories,
                     entryType = currentState.selectedType,
                     entrySource = currentState.selectedSource,
                     editingEntryId = currentState.editingEntryId,
@@ -247,12 +307,17 @@ class TrackerViewModel(
             it.copy(
                 selectedDestination = TrackerDestination.Capture,
                 entryNameInput = entry.name,
+                entryInputMode = EntryInputMode.DirectCalories,
                 calorieInput = entry.amount.toString(),
+                consumedAmountInput = "",
+                caloriesPer100Input = "",
                 selectedType = entry.type,
                 selectedSource = entry.source,
                 editingEntryId = entry.id,
                 entryRecordedOnEpochDay = entry.recordedOnEpochDay,
                 inputError = null,
+                consumedAmountInputError = null,
+                caloriesPer100InputError = null,
                 pendingDeleteEntry = null
             )
         }
@@ -323,12 +388,17 @@ class TrackerViewModel(
         _uiState.update {
             it.copy(
                 entryNameInput = "",
+                entryInputMode = EntryInputMode.DirectCalories,
                 calorieInput = "",
+                consumedAmountInput = "",
+                caloriesPer100Input = "",
                 selectedType = CalorieEntryType.INTAKE,
                 selectedSource = CalorieEntrySource.MEAL,
                 editingEntryId = null,
                 entryRecordedOnEpochDay = it.currentEpochDay,
-                inputError = null
+                inputError = null,
+                consumedAmountInputError = null,
+                caloriesPer100InputError = null
             )
         }
     }
@@ -361,6 +431,7 @@ class TrackerViewModel(
                     loadGoalTargetUseCase = appContainer.loadGoalTargetUseCase,
                     updateGoalTargetUseCase = appContainer.updateGoalTargetUseCase,
                     calculateGoalProgressUseCase = appContainer.calculateGoalProgressUseCase,
+                    portionCalorieCalculator = appContainer.portionCalorieCalculator,
                     clock = appContainer.clock
                 )
             }

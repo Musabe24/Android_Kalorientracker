@@ -16,6 +16,7 @@ import com.example.kalorientracker.domain.calorie.LoadCalorieOverviewUseCase
 import com.example.kalorientracker.domain.calorie.LoadCalorieTimelineTrendUseCase
 import com.example.kalorientracker.domain.calorie.LoadGoalTargetUseCase
 import com.example.kalorientracker.domain.calorie.LoadWeeklyCalorieTrendUseCase
+import com.example.kalorientracker.domain.calorie.PortionCalorieCalculator
 import com.example.kalorientracker.domain.calorie.SaveCalorieEntryUseCase
 import com.example.kalorientracker.domain.calorie.UpdateGoalTargetUseCase
 import com.example.kalorientracker.testutil.InMemoryCalorieEntryRepository
@@ -104,6 +105,40 @@ class TrackerViewModelTest {
         advanceUntilIdle()
 
         assertEquals(CalorieInputValidationError.NonPositive, viewModel.uiState.value.inputError)
+    }
+
+    @Test
+    fun `portion calculator mode saves calculated calories`() = runTest {
+        val viewModel = createViewModel()
+
+        advanceUntilIdle()
+        viewModel.onEntryInputModeSelected(EntryInputMode.PortionCalculator)
+        viewModel.onEntryNameChanged("Milk")
+        viewModel.onConsumedAmountInputChanged("140")
+        viewModel.onCaloriesPer100InputChanged("64")
+        viewModel.saveEntry()
+        advanceUntilIdle()
+
+        val entry = viewModel.uiState.value.entries.single()
+        assertEquals("Milk", entry.name)
+        assertEquals(90, entry.amount)
+    }
+
+    @Test
+    fun `portion calculator mode exposes field specific errors`() = runTest {
+        val viewModel = createViewModel()
+
+        advanceUntilIdle()
+        viewModel.onEntryInputModeSelected(EntryInputMode.PortionCalculator)
+        viewModel.onConsumedAmountInputChanged("")
+        viewModel.onCaloriesPer100InputChanged("0")
+        viewModel.saveEntry()
+        advanceUntilIdle()
+
+        val uiState = viewModel.uiState.value
+        assertEquals(CalorieInputValidationError.Blank, uiState.consumedAmountInputError)
+        assertEquals(CalorieInputValidationError.NonPositive, uiState.caloriesPer100InputError)
+        assertTrue(uiState.entries.isEmpty())
     }
 
     @Test
@@ -427,6 +462,9 @@ class TrackerViewModelTest {
                 repository = goalTargetRepository
             ),
             calculateGoalProgressUseCase = CalculateGoalProgressUseCase(),
+            portionCalorieCalculator = PortionCalorieCalculator(
+                inputValidator = CalorieInputValidator()
+            ),
             clock = fixedTestClock()
         )
     }
