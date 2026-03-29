@@ -42,7 +42,10 @@ import java.time.LocalDate
 fun TrackerCaptureScreen(
     uiState: TrackerUiState,
     onEntryNameChanged: (String) -> Unit,
+    onEntryInputModeSelected: (EntryInputMode) -> Unit,
     onCalorieInputChanged: (String) -> Unit,
+    onConsumedAmountInputChanged: (String) -> Unit,
+    onCaloriesPer100InputChanged: (String) -> Unit,
     onTypeSelected: (CalorieEntryType) -> Unit,
     onSourceSelected: (CalorieEntrySource) -> Unit,
     onShowPreviousEntryDate: () -> Unit,
@@ -72,7 +75,10 @@ fun TrackerCaptureScreen(
             EntryComposerCard(
                 uiState = uiState,
                 onEntryNameChanged = onEntryNameChanged,
+                onEntryInputModeSelected = onEntryInputModeSelected,
                 onCalorieInputChanged = onCalorieInputChanged,
+                onConsumedAmountInputChanged = onConsumedAmountInputChanged,
+                onCaloriesPer100InputChanged = onCaloriesPer100InputChanged,
                 onTypeSelected = onTypeSelected,
                 onSourceSelected = onSourceSelected,
                 onShowPreviousEntryDate = onShowPreviousEntryDate,
@@ -113,7 +119,10 @@ fun TrackerCaptureScreen(
 private fun EntryComposerCard(
     uiState: TrackerUiState,
     onEntryNameChanged: (String) -> Unit,
+    onEntryInputModeSelected: (EntryInputMode) -> Unit,
     onCalorieInputChanged: (String) -> Unit,
+    onConsumedAmountInputChanged: (String) -> Unit,
+    onCaloriesPer100InputChanged: (String) -> Unit,
     onTypeSelected: (CalorieEntryType) -> Unit,
     onSourceSelected: (CalorieEntrySource) -> Unit,
     onShowPreviousEntryDate: () -> Unit,
@@ -148,24 +157,89 @@ private fun EntryComposerCard(
                 onResetEntryDateToToday = onResetEntryDateToToday
             )
 
-            OutlinedTextField(
-                value = uiState.calorieInput,
-                onValueChange = onCalorieInputChanged,
-                label = { Text(stringResource(R.string.calorie_input_label)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                isError = uiState.inputError != null,
-                supportingText = {
-                    Text(
-                        calorieInputErrorMessage(uiState.inputError)
-                            ?: stringResource(R.string.calorie_input_hint)
+            SelectionGroup(
+                title = stringResource(R.string.entry_input_mode_title),
+                options = listOf(
+                    SelectionOption(
+                        label = stringResource(R.string.entry_input_mode_direct),
+                        selected = uiState.usesDirectCalorieInput,
+                        accent = Ink,
+                        onClick = { onEntryInputModeSelected(EntryInputMode.DirectCalories) }
+                    ),
+                    SelectionOption(
+                        label = stringResource(R.string.entry_input_mode_portion),
+                        selected = uiState.usesPortionCalculator,
+                        accent = Gold,
+                        onClick = { onEntryInputModeSelected(EntryInputMode.PortionCalculator) }
                     )
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(18.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(TrackerScreenTestTags.CALORIE_INPUT_FIELD)
+                )
             )
+
+            if (uiState.usesDirectCalorieInput) {
+                OutlinedTextField(
+                    value = uiState.calorieInput,
+                    onValueChange = onCalorieInputChanged,
+                    label = { Text(stringResource(R.string.calorie_input_label)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = uiState.inputError != null,
+                    supportingText = {
+                        Text(
+                            calorieInputErrorMessage(uiState.inputError)
+                                ?: stringResource(R.string.calorie_input_hint)
+                        )
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(TrackerScreenTestTags.CALORIE_INPUT_FIELD)
+                )
+            } else {
+                OutlinedTextField(
+                    value = uiState.consumedAmountInput,
+                    onValueChange = onConsumedAmountInputChanged,
+                    label = { Text(stringResource(R.string.consumed_amount_input_label)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = uiState.consumedAmountInputError != null,
+                    supportingText = {
+                        Text(
+                            calorieInputErrorMessage(uiState.consumedAmountInputError)
+                                ?: stringResource(R.string.consumed_amount_input_hint)
+                        )
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = uiState.caloriesPer100Input,
+                    onValueChange = onCaloriesPer100InputChanged,
+                    label = { Text(stringResource(R.string.calories_per_100_input_label)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = uiState.caloriesPer100InputError != null,
+                    supportingText = {
+                        Text(
+                            calorieInputErrorMessage(uiState.caloriesPer100InputError)
+                                ?: stringResource(R.string.calories_per_100_input_hint)
+                        )
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text(
+                    text = uiState.calculatedCaloriesPreview?.let { calculatedCalories ->
+                        stringResource(
+                            R.string.calculated_calories_preview_template,
+                            calculatedCalories
+                        )
+                    } ?: stringResource(R.string.calculated_calories_preview_pending),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = trackerSecondaryTextColor()
+                )
+            }
 
             SelectionGroup(
                 title = stringResource(R.string.entry_source_title),

@@ -16,6 +16,7 @@ import com.example.kalorientracker.domain.calorie.LoadCalorieOverviewUseCase
 import com.example.kalorientracker.domain.calorie.LoadCalorieTimelineTrendUseCase
 import com.example.kalorientracker.domain.calorie.LoadGoalTargetUseCase
 import com.example.kalorientracker.domain.calorie.LoadWeeklyCalorieTrendUseCase
+import com.example.kalorientracker.domain.calorie.PortionCalorieCalculator
 import com.example.kalorientracker.domain.calorie.SaveCalorieEntryUseCase
 import com.example.kalorientracker.domain.calorie.UpdateGoalTargetUseCase
 import java.time.Clock
@@ -31,6 +32,7 @@ interface TrackerAppContainer {
     val loadGoalTargetUseCase: LoadGoalTargetUseCase
     val updateGoalTargetUseCase: UpdateGoalTargetUseCase
     val calculateGoalProgressUseCase: CalculateGoalProgressUseCase
+    val portionCalorieCalculator: PortionCalorieCalculator
 }
 
 class DefaultTrackerAppContainer(context: Context) : TrackerAppContainer {
@@ -65,13 +67,18 @@ class DefaultTrackerAppContainer(context: Context) : TrackerAppContainer {
     }
 
     private val dailyCalorieCalculator = DailyCalorieCalculator()
+    private val calorieInputValidator = CalorieInputValidator()
 
     override val saveCalorieEntryUseCase: SaveCalorieEntryUseCase by lazy {
         SaveCalorieEntryUseCase(
             repository = calorieRepository,
-            inputValidator = CalorieInputValidator(),
+            inputValidator = calorieInputValidator,
             clock = clock
         )
+    }
+
+    override val portionCalorieCalculator: PortionCalorieCalculator by lazy {
+        PortionCalorieCalculator(inputValidator = calorieInputValidator)
     }
 
     override val deleteCalorieEntryUseCase: DeleteCalorieEntryUseCase by lazy {

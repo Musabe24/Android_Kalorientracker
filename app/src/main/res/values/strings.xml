@@ -63,8 +63,17 @@
     <string name="entry_date_previous">Earlier</string>
     <string name="entry_date_next">Later</string>
     <string name="entry_date_today">Jump to today</string>
+    <string name="entry_input_mode_title">How do you want to log calories?</string>
+    <string name="entry_input_mode_direct">Enter calories directly</string>
+    <string name="entry_input_mode_portion">Calculate from portion</string>
     <string name="calorie_input_label">Calories</string>
     <string name="calorie_input_hint">Use whole numbers for the fastest logging flow.</string>
+    <string name="consumed_amount_input_label">Consumed amount</string>
+    <string name="consumed_amount_input_hint">Enter the amount you consumed, for example 140 for 140 ml.</string>
+    <string name="calories_per_100_input_label">Calories per 100 units</string>
+    <string name="calories_per_100_input_hint">Use the package reference value, such as kcal per 100 ml or 100 g.</string>
+    <string name="calculated_calories_preview_template">Calculated calories: %1$d kcal</string>
+    <string name="calculated_calories_preview_pending">Enter both values to calculate the total calories automatically.</string>
     <string name="error_input_blank">Input must not be blank.</string>
     <string name="error_input_not_whole_number">Input must be a whole number.</string>
     <string name="error_input_non_positive">Calories must be greater than zero.</string>
