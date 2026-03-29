@@ -9,6 +9,21 @@ The goal is **readable, maintainable, and well-structured** Android code aligned
 - Preferred communication language in project artifacts: **English**.
 - This repository is **AI-first**: code is expected to be written almost entirely by agents.
 
+## 1.1) Mandatory Git workflow
+- `main` must remain **stable** at all times.
+- `development` is the integration branch for ongoing work.
+- Agents must **never** implement work directly on `main`.
+- Agents must **never** implement work directly on `development`.
+- Every code or documentation change must start from a dedicated topic branch created from the latest `development` branch.
+- Allowed topic branch prefixes are:
+  - `feature/<short-description>` for user-facing functionality
+  - `bugfix/<short-description>` for defect fixes
+  - `chore/<short-description>` for maintenance, tooling, CI, or documentation work
+- Every topic branch must target **`development`** in its pull request.
+- `main` may only be updated by intentionally merging `development` into `main` after enough validated changes are ready for release.
+- If an agent notices it is on `main` or `development` before making changes, it must stop and create the correct topic branch first.
+- If the current branch does not match the task type, the agent must create a new correctly named branch before editing files.
+
 ## 2) Core Principle: Clean Code is mandatory
 The following rules apply to every commit:
 
@@ -120,7 +135,9 @@ When multiple solutions are possible, prioritize in this order:
 
 ## 11) Agent workflow
 - Create a brief plan first for larger changes.
+- Before editing files, verify the current branch and target branch against the mandatory Git workflow above.
 - Prefer small, traceable commits.
+- Keep each topic branch focused on one concern and open a pull request to `development` when the change is ready.
 - Avoid silent side-refactorings unrelated to the task.
 - Respect existing structure; refactor only with clear value.
 - When uncertain, choose the option that is easiest for the next agent to understand and extend.
