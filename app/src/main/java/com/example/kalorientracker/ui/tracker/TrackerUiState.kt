@@ -44,6 +44,9 @@ data class TrackerUiState(
     val selectedAiModel: SupportedAiModel = SupportedAiModel.GEMINI_1_5_FLASH,
     val isAiAnalyzing: Boolean = false,
     val aiAnalysisError: String? = null,
+    val aiApiKey: String? = null,
+    val aiApiKeyInput: String = "",
+    val isEditingAiSettings: Boolean = false,
     val totalIntake: Int = 0,
     val totalBurned: Int = 0,
     val netCalories: Int = 0

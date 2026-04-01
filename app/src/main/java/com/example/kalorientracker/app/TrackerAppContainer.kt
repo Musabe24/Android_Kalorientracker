@@ -32,6 +32,8 @@ interface TrackerAppContainer {
     val loadGoalTargetUseCase: LoadGoalTargetUseCase
     val updateGoalTargetUseCase: UpdateGoalTargetUseCase
     val analyzeMealUseCase: com.example.kalorientracker.domain.calorie.AnalyzeMealUseCase
+    val loadAiApiKeyUseCase: com.example.kalorientracker.domain.calorie.LoadAiApiKeyUseCase
+    val saveAiApiKeyUseCase: com.example.kalorientracker.domain.calorie.SaveAiApiKeyUseCase
     val calculateGoalProgressUseCase: CalculateGoalProgressUseCase
     val portionCalorieCalculator: PortionCalorieCalculator
 }
@@ -65,6 +67,15 @@ class DefaultTrackerAppContainer(context: Context) : TrackerAppContainer {
 
     private val goalTargetRepository by lazy {
         RoomGoalTargetRepository(goalSettingsDao = database.goalSettingsDao())
+    }
+
+    private val settingsRepository by lazy {
+        com.example.kalorientracker.data.calorie.SharedPreferencesSettingsRepository(
+            sharedPreferences = context.applicationContext.getSharedPreferences(
+                SETTINGS_PREFERENCES,
+                Context.MODE_PRIVATE
+            )
+        )
     }
 
     private val dailyCalorieCalculator = DailyCalorieCalculator()
@@ -125,10 +136,18 @@ class DefaultTrackerAppContainer(context: Context) : TrackerAppContainer {
         UpdateGoalTargetUseCase(repository = goalTargetRepository)
     }
 
+    override val loadAiApiKeyUseCase: com.example.kalorientracker.domain.calorie.LoadAiApiKeyUseCase by lazy {
+        com.example.kalorientracker.domain.calorie.LoadAiApiKeyUseCase(repository = settingsRepository)
+    }
+
+    override val saveAiApiKeyUseCase: com.example.kalorientracker.domain.calorie.SaveAiApiKeyUseCase by lazy {
+        com.example.kalorientracker.domain.calorie.SaveAiApiKeyUseCase(repository = settingsRepository)
+    }
+
     override val analyzeMealUseCase: com.example.kalorientracker.domain.calorie.AnalyzeMealUseCase by lazy {
         com.example.kalorientracker.domain.calorie.AnalyzeMealUseCase(
             aiMealParser = com.example.kalorientracker.data.calorie.GeminiAiMealParser(
-                apiKey = context.getString(com.example.kalorientracker.R.string.google_ai_api_key)
+                apiKey = "" // Updated reactively by ViewModel
             )
         )
     }
@@ -138,5 +157,6 @@ class DefaultTrackerAppContainer(context: Context) : TrackerAppContainer {
     private companion object {
         const val TRACKER_DATABASE = "calorie_tracker.db"
         const val LEGACY_TRACKER_PREFERENCES = "calorie_tracker_preferences"
+        const val SETTINGS_PREFERENCES = "tracker_settings"
     }
 }

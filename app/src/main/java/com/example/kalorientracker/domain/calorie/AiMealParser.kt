@@ -5,6 +5,8 @@ interface AiMealParser {
         description: String,
         model: SupportedAiModel
     ): AiMealAnalysisResult
+
+    fun updateApiKey(apiKey: String)
 }
 
 enum class SupportedAiModel(val modelId: String, val displayName: String) {

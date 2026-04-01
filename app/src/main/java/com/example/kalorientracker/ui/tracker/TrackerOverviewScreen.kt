@@ -45,6 +45,10 @@ fun TrackerOverviewScreen(
     onGoalTargetInputChanged: (String) -> Unit,
     onCancelGoalTargetEditing: () -> Unit,
     onSaveGoalTarget: () -> Unit,
+    onAiApiKeyInputChanged: (String) -> Unit,
+    onStartEditingAiSettings: () -> Unit,
+    onCancelAiSettingsEditing: () -> Unit,
+    onSaveAiApiKey: () -> Unit,
     contentPadding: PaddingValues
 ) {
     LazyColumn(
@@ -79,6 +83,15 @@ fun TrackerOverviewScreen(
                 onTrendRangeSelected = onTrendRangeSelected,
                 onEarlierTrendWindowSelected = onEarlierTrendWindowSelected,
                 onLaterTrendWindowSelected = onLaterTrendWindowSelected
+            )
+        }
+        item {
+            AiSettingsSection(
+                uiState = uiState,
+                onApiKeyInputChanged = onAiApiKeyInputChanged,
+                onStartEditing = onStartEditingAiSettings,
+                onCancelEditing = onCancelAiSettingsEditing,
+                onSaveApiKey = onSaveAiApiKey
             )
         }
     }
@@ -232,6 +245,73 @@ private fun OverviewStatCard(
                 style = MaterialTheme.typography.titleMedium,
                 color = trackerPrimaryTextColor()
             )
+        }
+    }
+}
+
+@Composable
+private fun AiSettingsSection(
+    uiState: TrackerUiState,
+    onApiKeyInputChanged: (String) -> Unit,
+    onStartEditing: () -> Unit,
+    onCancelEditing: () -> Unit,
+    onSaveApiKey: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = trackerCardColor()),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            SectionHeader(
+                eyebrow = "AI SERVICES",
+                title = "Gemini API Key",
+                subtitle = "Required for Magic Log and AI Insights."
+            )
+
+            if (uiState.isEditingAiSettings) {
+                androidx.compose.material3.OutlinedTextField(
+                    value = uiState.aiApiKeyInput,
+                    onValueChange = onApiKeyInputChanged,
+                    label = { Text("API Key") },
+                    placeholder = { Text("Paste your key here") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    androidx.compose.material3.TextButton(onClick = onCancelEditing) {
+                        Text("Cancel")
+                    }
+                    androidx.compose.material3.Button(
+                        onClick = onSaveApiKey,
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Text("Save Key")
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (uiState.aiApiKey.isNullOrBlank()) "No key configured" else "••••••••••••••••",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (uiState.aiApiKey.isNullOrBlank()) Coral else trackerPrimaryTextColor()
+                    )
+                    androidx.compose.material3.TextButton(onClick = onStartEditing) {
+                        Text(if (uiState.aiApiKey.isNullOrBlank()) "Add Key" else "Change")
+                    }
+                }
+            }
         }
     }
 }

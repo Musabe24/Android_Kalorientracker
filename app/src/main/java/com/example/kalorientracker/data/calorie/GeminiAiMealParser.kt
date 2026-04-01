@@ -14,8 +14,13 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 
 class GeminiAiMealParser(
-    private val apiKey: String
+    private var apiKey: String
 ) : AiMealParser {
+
+    override fun updateApiKey(apiKey: String) {
+        this.apiKey = apiKey
+    }
+
     private val systemInstructionText =
         "You are a nutritional assistant. Your task is to analyze meal descriptions and extract food items. " +
         "For each item, identify: 'name', 'calories' (integer estimate), 'type' (either 'INTAKE' for food/drinks or 'BURNED' for activities), " +

@@ -1,7 +1,7 @@
 package com.example.kalorientracker.domain.calorie
 
 class AnalyzeMealUseCase(
-    private val aiMealParser: AiMealParser
+    val aiMealParser: AiMealParser
 ) {
     suspend operator fun invoke(
         description: String,

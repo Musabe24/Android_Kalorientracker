@@ -49,6 +49,8 @@ class TrackerViewModel(
     private val loadGoalTargetUseCase: LoadGoalTargetUseCase,
     private val updateGoalTargetUseCase: UpdateGoalTargetUseCase,
     private val analyzeMealUseCase: AnalyzeMealUseCase,
+    private val loadAiApiKeyUseCase: com.example.kalorientracker.domain.calorie.LoadAiApiKeyUseCase,
+    private val saveAiApiKeyUseCase: com.example.kalorientracker.domain.calorie.SaveAiApiKeyUseCase,
     private val calculateGoalProgressUseCase: CalculateGoalProgressUseCase,
     private val portionCalorieCalculator: PortionCalorieCalculator,
     private val clock: Clock,
@@ -122,6 +124,13 @@ class TrackerViewModel(
                 }
             }
         }
+
+        viewModelScope.launch {
+            loadAiApiKeyUseCase().collect { apiKey ->
+                _uiState.update { it.copy(aiApiKey = apiKey) }
+                apiKey?.let { analyzeMealUseCase.aiMealParser.updateApiKey(it) }
+            }
+        }
     }
 
     fun onAiMealDescriptionChanged(value: String) {
@@ -130,6 +139,31 @@ class TrackerViewModel(
 
     fun onAiModelSelected(model: SupportedAiModel) {
         _uiState.update { it.copy(selectedAiModel = model) }
+    }
+
+    fun onAiApiKeyInputChanged(value: String) {
+        _uiState.update { it.copy(aiApiKeyInput = value) }
+    }
+
+    fun startEditingAiSettings() {
+        _uiState.update { 
+            it.copy(
+                isEditingAiSettings = true,
+                aiApiKeyInput = it.aiApiKey ?: ""
+            ) 
+        }
+    }
+
+    fun cancelAiSettingsEditing() {
+        _uiState.update { it.copy(isEditingAiSettings = false, aiApiKeyInput = "") }
+    }
+
+    fun saveAiApiKey() {
+        val apiKey = _uiState.value.aiApiKeyInput
+        viewModelScope.launch {
+            saveAiApiKeyUseCase(apiKey)
+            _uiState.update { it.copy(isEditingAiSettings = false, aiApiKeyInput = "") }
+        }
     }
 
     fun analyzeMealWithAi() {
@@ -500,6 +534,8 @@ class TrackerViewModel(
                     loadGoalTargetUseCase = appContainer.loadGoalTargetUseCase,
                     updateGoalTargetUseCase = appContainer.updateGoalTargetUseCase,
                     analyzeMealUseCase = appContainer.analyzeMealUseCase,
+                    loadAiApiKeyUseCase = appContainer.loadAiApiKeyUseCase,
+                    saveAiApiKeyUseCase = appContainer.saveAiApiKeyUseCase,
                     calculateGoalProgressUseCase = appContainer.calculateGoalProgressUseCase,
                     portionCalorieCalculator = appContainer.portionCalorieCalculator,
                     clock = appContainer.clock

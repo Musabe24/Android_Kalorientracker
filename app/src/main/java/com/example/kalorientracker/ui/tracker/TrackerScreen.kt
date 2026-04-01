@@ -87,6 +87,10 @@ fun TrackerScreen(viewModel: TrackerViewModel, modifier: Modifier = Modifier) {
         onAiMealDescriptionChanged = viewModel::onAiMealDescriptionChanged,
         onAiModelSelected = viewModel::onAiModelSelected,
         onAnalyzeMealWithAi = viewModel::analyzeMealWithAi,
+        onAiApiKeyInputChanged = viewModel::onAiApiKeyInputChanged,
+        onStartEditingAiSettings = viewModel::startEditingAiSettings,
+        onCancelAiSettingsEditing = viewModel::cancelAiSettingsEditing,
+        onSaveAiApiKey = viewModel::saveAiApiKey,
         modifier = modifier
     )
 }
@@ -125,6 +129,10 @@ fun TrackerContent(
     onAiMealDescriptionChanged: (String) -> Unit,
     onAiModelSelected: (com.example.kalorientracker.domain.calorie.SupportedAiModel) -> Unit,
     onAnalyzeMealWithAi: () -> Unit,
+    onAiApiKeyInputChanged: (String) -> Unit,
+    onStartEditingAiSettings: () -> Unit,
+    onCancelAiSettingsEditing: () -> Unit,
+    onSaveAiApiKey: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -147,6 +155,10 @@ fun TrackerContent(
                     onGoalTargetInputChanged = onGoalTargetInputChanged,
                     onCancelGoalTargetEditing = onCancelGoalTargetEditing,
                     onSaveGoalTarget = onSaveGoalTarget,
+                    onAiApiKeyInputChanged = onAiApiKeyInputChanged,
+                    onStartEditingAiSettings = onStartEditingAiSettings,
+                    onCancelAiSettingsEditing = onCancelAiSettingsEditing,
+                    onSaveAiApiKey = onSaveAiApiKey,
                     contentPadding = PaddingValues(20.dp)
                 )
 
