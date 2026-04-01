@@ -33,6 +33,7 @@ import com.example.kalorientracker.R
 import com.example.kalorientracker.domain.calorie.CalorieEntry
 import com.example.kalorientracker.domain.calorie.CalorieEntrySource
 import com.example.kalorientracker.domain.calorie.CalorieEntryType
+import com.example.kalorientracker.domain.calorie.SupportedAiModel
 import com.example.kalorientracker.ui.theme.Gold
 import com.example.kalorientracker.ui.theme.Ink
 import com.example.kalorientracker.ui.theme.InkMuted
@@ -60,6 +61,7 @@ fun TrackerCaptureScreen(
     onDeleteEntryClicked: (CalorieEntry) -> Unit,
     onShowDatePicker: () -> Unit,
     onAiMealDescriptionChanged: (String) -> Unit,
+    onAiModelSelected: (SupportedAiModel) -> Unit,
     onAnalyzeMealWithAi: () -> Unit,
     contentPadding: PaddingValues
 ) {
@@ -94,6 +96,7 @@ fun TrackerCaptureScreen(
                 onCancelEditingClicked = onCancelEditingClicked,
                 onShowDatePicker = onShowDatePicker,
                 onAiMealDescriptionChanged = onAiMealDescriptionChanged,
+                onAiModelSelected = onAiModelSelected,
                 onAnalyzeMealWithAi = onAnalyzeMealWithAi
             )
         }
@@ -141,6 +144,7 @@ private fun EntryComposerCard(
     onCancelEditingClicked: () -> Unit,
     onShowDatePicker: () -> Unit,
     onAiMealDescriptionChanged: (String) -> Unit,
+    onAiModelSelected: (SupportedAiModel) -> Unit,
     onAnalyzeMealWithAi: () -> Unit
 ) {
     Card(
@@ -155,9 +159,11 @@ private fun EntryComposerCard(
             if (uiState.showsMagicInput) {
                 MagicInputSection(
                     input = uiState.aiMealDescriptionInput,
+                    selectedModel = uiState.selectedAiModel,
                     isAnalyzing = uiState.isAiAnalyzing,
                     error = uiState.aiAnalysisError,
                     onInputChanged = onAiMealDescriptionChanged,
+                    onModelSelected = onAiModelSelected,
                     onAnalyzeClicked = onAnalyzeMealWithAi
                 )
             }
@@ -385,9 +391,11 @@ private fun EntryDateSelector(
 @Composable
 private fun MagicInputSection(
     input: String,
+    selectedModel: SupportedAiModel,
     isAnalyzing: Boolean,
     error: String?,
     onInputChanged: (String) -> Unit,
+    onModelSelected: (SupportedAiModel) -> Unit,
     onAnalyzeClicked: () -> Unit
 ) {
     Card(
@@ -409,6 +417,19 @@ private fun MagicInputSection(
                 style = MaterialTheme.typography.bodySmall,
                 color = trackerSecondaryTextColor()
             )
+
+            SelectionGroup(
+                title = "Choose AI Model",
+                options = SupportedAiModel.entries.map { model ->
+                    SelectionOption(
+                        label = model.displayName,
+                        selected = selectedModel == model,
+                        accent = if (model == SupportedAiModel.GEMINI_1_5_FLASH) Olive else Gold,
+                        onClick = { onModelSelected(model) }
+                    )
+                }
+            )
+
             OutlinedTextField(
                 value = input,
                 onValueChange = onInputChanged,

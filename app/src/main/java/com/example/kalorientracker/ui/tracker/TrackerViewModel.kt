@@ -24,6 +24,7 @@ import com.example.kalorientracker.domain.calorie.PortionCalorieCalculationResul
 import com.example.kalorientracker.domain.calorie.PortionCalorieCalculator
 import com.example.kalorientracker.domain.calorie.SaveCalorieEntryResult
 import com.example.kalorientracker.domain.calorie.SaveCalorieEntryUseCase
+import com.example.kalorientracker.domain.calorie.SupportedAiModel
 import com.example.kalorientracker.domain.calorie.UpdateGoalTargetResult
 import com.example.kalorientracker.domain.calorie.UpdateGoalTargetUseCase
 import java.time.Clock
@@ -127,14 +128,19 @@ class TrackerViewModel(
         _uiState.update { it.copy(aiMealDescriptionInput = value, aiAnalysisError = null) }
     }
 
+    fun onAiModelSelected(model: SupportedAiModel) {
+        _uiState.update { it.copy(selectedAiModel = model) }
+    }
+
     fun analyzeMealWithAi() {
-        val description = _uiState.value.aiMealDescriptionInput
+        val currentState = _uiState.value
+        val description = currentState.aiMealDescriptionInput
         if (description.isBlank()) return
 
         _uiState.update { it.copy(isAiAnalyzing = true, aiAnalysisError = null) }
 
         viewModelScope.launch {
-            when (val result = analyzeMealUseCase(description)) {
+            when (val result = analyzeMealUseCase(description, currentState.selectedAiModel)) {
                 is AiMealAnalysisResult.Error -> {
                     _uiState.update { it.copy(isAiAnalyzing = false, aiAnalysisError = result.message) }
                 }

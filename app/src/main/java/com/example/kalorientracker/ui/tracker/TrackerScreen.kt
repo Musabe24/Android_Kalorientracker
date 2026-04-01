@@ -85,6 +85,7 @@ fun TrackerScreen(viewModel: TrackerViewModel, modifier: Modifier = Modifier) {
         onDismissDatePicker = viewModel::dismissDatePicker,
         onDateSelected = viewModel::onEntryDateSelected,
         onAiMealDescriptionChanged = viewModel::onAiMealDescriptionChanged,
+        onAiModelSelected = viewModel::onAiModelSelected,
         onAnalyzeMealWithAi = viewModel::analyzeMealWithAi,
         modifier = modifier
     )
@@ -122,6 +123,7 @@ fun TrackerContent(
     onDismissDatePicker: () -> Unit,
     onDateSelected: (Long) -> Unit,
     onAiMealDescriptionChanged: (String) -> Unit,
+    onAiModelSelected: (com.example.kalorientracker.domain.calorie.SupportedAiModel) -> Unit,
     onAnalyzeMealWithAi: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -166,6 +168,7 @@ fun TrackerContent(
                     onDeleteEntryClicked = onDeleteEntryClicked,
                     onShowDatePicker = onShowDatePicker,
                     onAiMealDescriptionChanged = onAiMealDescriptionChanged,
+                    onAiModelSelected = onAiModelSelected,
                     onAnalyzeMealWithAi = onAnalyzeMealWithAi,
                     contentPadding = PaddingValues(20.dp)
                 )

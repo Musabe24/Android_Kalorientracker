@@ -8,6 +8,7 @@ import com.example.kalorientracker.domain.calorie.CalorieHistoryDay
 import com.example.kalorientracker.domain.calorie.DailyCalorieTrendPoint
 import com.example.kalorientracker.domain.calorie.GoalProgressInsights
 import com.example.kalorientracker.domain.calorie.GoalTargetValidationError
+import com.example.kalorientracker.domain.calorie.SupportedAiModel
 
 data class TrackerUiState(
     val selectedDestination: TrackerDestination = TrackerDestination.Overview,
@@ -40,6 +41,7 @@ data class TrackerUiState(
     val caloriesPer100InputError: CalorieInputValidationError? = null,
     val goalTargetError: GoalTargetValidationError? = null,
     val aiMealDescriptionInput: String = "",
+    val selectedAiModel: SupportedAiModel = SupportedAiModel.GEMINI_1_5_FLASH,
     val isAiAnalyzing: Boolean = false,
     val aiAnalysisError: String? = null,
     val totalIntake: Int = 0,
