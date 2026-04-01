@@ -41,7 +41,6 @@ data class TrackerUiState(
     val caloriesPer100InputError: CalorieInputValidationError? = null,
     val goalTargetError: GoalTargetValidationError? = null,
     val aiMealDescriptionInput: String = "",
-    val selectedAiModel: SupportedAiModel = SupportedAiModel.GEMINI_3_1_FLASH_LITE,
     val isAiAnalyzing: Boolean = false,
     val aiAnalysisError: String? = null,
     val aiApiKey: String? = null,

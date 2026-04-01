@@ -61,7 +61,6 @@ fun TrackerCaptureScreen(
     onDeleteEntryClicked: (CalorieEntry) -> Unit,
     onShowDatePicker: () -> Unit,
     onAiMealDescriptionChanged: (String) -> Unit,
-    onAiModelSelected: (SupportedAiModel) -> Unit,
     onAnalyzeMealWithAi: () -> Unit,
     contentPadding: PaddingValues
 ) {
@@ -96,7 +95,6 @@ fun TrackerCaptureScreen(
                 onCancelEditingClicked = onCancelEditingClicked,
                 onShowDatePicker = onShowDatePicker,
                 onAiMealDescriptionChanged = onAiMealDescriptionChanged,
-                onAiModelSelected = onAiModelSelected,
                 onAnalyzeMealWithAi = onAnalyzeMealWithAi
             )
         }
@@ -144,7 +142,6 @@ private fun EntryComposerCard(
     onCancelEditingClicked: () -> Unit,
     onShowDatePicker: () -> Unit,
     onAiMealDescriptionChanged: (String) -> Unit,
-    onAiModelSelected: (SupportedAiModel) -> Unit,
     onAnalyzeMealWithAi: () -> Unit
 ) {
     Card(
@@ -159,11 +156,9 @@ private fun EntryComposerCard(
             if (uiState.showsMagicInput) {
                 MagicInputSection(
                     input = uiState.aiMealDescriptionInput,
-                    selectedModel = uiState.selectedAiModel,
                     isAnalyzing = uiState.isAiAnalyzing,
                     error = uiState.aiAnalysisError,
                     onInputChanged = onAiMealDescriptionChanged,
-                    onModelSelected = onAiModelSelected,
                     onAnalyzeClicked = onAnalyzeMealWithAi
                 )
             }
@@ -391,11 +386,9 @@ private fun EntryDateSelector(
 @Composable
 private fun MagicInputSection(
     input: String,
-    selectedModel: SupportedAiModel,
     isAnalyzing: Boolean,
     error: String?,
     onInputChanged: (String) -> Unit,
-    onModelSelected: (SupportedAiModel) -> Unit,
     onAnalyzeClicked: () -> Unit
 ) {
     Card(
@@ -416,22 +409,6 @@ private fun MagicInputSection(
                 text = "Describe your meal and let AI fill the form for you.",
                 style = MaterialTheme.typography.bodySmall,
                 color = trackerSecondaryTextColor()
-            )
-
-            SelectionGroup(
-                title = "Choose AI Model",
-                options = SupportedAiModel.entries.map { model ->
-                    SelectionOption(
-                        label = model.displayName,
-                        selected = selectedModel == model,
-                        accent = when (model) {
-                            SupportedAiModel.GEMINI_3_1_FLASH_LITE -> Sky
-                            SupportedAiModel.GEMINI_1_5_FLASH -> Olive
-                            SupportedAiModel.GEMINI_1_5_PRO -> Gold
-                        },
-                        onClick = { onModelSelected(model) }
-                    )
-                }
             )
 
             OutlinedTextField(

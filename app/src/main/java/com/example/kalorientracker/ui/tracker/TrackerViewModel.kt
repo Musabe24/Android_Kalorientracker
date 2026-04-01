@@ -138,10 +138,6 @@ class TrackerViewModel(
         _uiState.update { it.copy(aiMealDescriptionInput = value, aiAnalysisError = null) }
     }
 
-    fun onAiModelSelected(model: SupportedAiModel) {
-        _uiState.update { it.copy(selectedAiModel = model) }
-    }
-
     fun onAiApiKeyInputChanged(value: String) {
         _uiState.update { it.copy(aiApiKeyInput = value) }
     }
@@ -172,11 +168,11 @@ class TrackerViewModel(
         val description = currentState.aiMealDescriptionInput
         if (description.isBlank()) return
 
-        Log.d("TrackerViewModel", "Triggering AI analysis for: $description (Model: ${currentState.selectedAiModel})")
+        Log.d("TrackerViewModel", "Triggering AI analysis for: $description")
         _uiState.update { it.copy(isAiAnalyzing = true, aiAnalysisError = null) }
 
         viewModelScope.launch {
-            when (val result = analyzeMealUseCase(description, currentState.selectedAiModel)) {
+            when (val result = analyzeMealUseCase(description)) {
                 is AiMealAnalysisResult.Error -> {
                     Log.e("TrackerViewModel", "AI Analysis failed: ${result.message}")
                     _uiState.update { it.copy(isAiAnalyzing = false, aiAnalysisError = result.message) }
