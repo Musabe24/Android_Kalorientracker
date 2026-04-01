@@ -8,6 +8,7 @@ The goal is **readable, maintainable, and well-structured** Android code aligned
 - Every change should optimize for **readability**, **maintainability**, and **domain clarity**.
 - Preferred communication language in project artifacts: **English**.
 - This repository is **AI-first**: code is expected to be written almost entirely by agents.
+- **AI Roadmap:** Refer to `AI_ROADMAP.md` for planned AI integrations (NLP, Vision, Coaching).
 
 ## 1.1) Mandatory Git workflow
 - `main` must remain **stable** at all times.
