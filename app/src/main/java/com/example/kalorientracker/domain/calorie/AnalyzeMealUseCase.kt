@@ -5,7 +5,7 @@ class AnalyzeMealUseCase(
 ) {
     suspend operator fun invoke(
         description: String,
-        model: SupportedAiModel = SupportedAiModel.GEMINI_1_5_FLASH
+        model: SupportedAiModel = SupportedAiModel.GEMINI_3_1_FLASH_LITE
     ): AiMealAnalysisResult {
         if (description.isBlank()) {
             return AiMealAnalysisResult.Error("Description cannot be blank")

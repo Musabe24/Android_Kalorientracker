@@ -424,7 +424,11 @@ private fun MagicInputSection(
                     SelectionOption(
                         label = model.displayName,
                         selected = selectedModel == model,
-                        accent = if (model == SupportedAiModel.GEMINI_1_5_FLASH) Olive else Gold,
+                        accent = when (model) {
+                            SupportedAiModel.GEMINI_3_1_FLASH_LITE -> Sky
+                            SupportedAiModel.GEMINI_1_5_FLASH -> Olive
+                            SupportedAiModel.GEMINI_1_5_PRO -> Gold
+                        },
                         onClick = { onModelSelected(model) }
                     )
                 }

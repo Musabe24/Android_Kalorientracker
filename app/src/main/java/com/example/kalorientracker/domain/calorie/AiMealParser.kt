@@ -10,6 +10,7 @@ interface AiMealParser {
 }
 
 enum class SupportedAiModel(val modelId: String, val displayName: String) {
+    GEMINI_3_1_FLASH_LITE("gemini-3.1-flash-lite-preview", "Gemini 3.1 Lite (Fastest)"),
     GEMINI_1_5_FLASH("gemini-1.5-flash-latest", "Gemini 1.5 Flash (Fast)"),
     GEMINI_1_5_PRO("gemini-1.5-pro-latest", "Gemini 1.5 Pro (Complex)")
 }
