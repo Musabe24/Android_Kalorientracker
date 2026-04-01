@@ -1,5 +1,6 @@
 package com.example.kalorientracker.ui.tracker
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -171,17 +172,20 @@ class TrackerViewModel(
         val description = currentState.aiMealDescriptionInput
         if (description.isBlank()) return
 
+        Log.d("TrackerViewModel", "Triggering AI analysis for: $description (Model: ${currentState.selectedAiModel})")
         _uiState.update { it.copy(isAiAnalyzing = true, aiAnalysisError = null) }
 
         viewModelScope.launch {
             when (val result = analyzeMealUseCase(description, currentState.selectedAiModel)) {
                 is AiMealAnalysisResult.Error -> {
+                    Log.e("TrackerViewModel", "AI Analysis failed: ${result.message}")
                     _uiState.update { it.copy(isAiAnalyzing = false, aiAnalysisError = result.message) }
                 }
 
                 is AiMealAnalysisResult.Success -> {
+                    Log.d("TrackerViewModel", "AI Analysis succeeded with ${result.meals.size} items")
                     val firstMeal = result.meals.firstOrNull()
-                    _uiState.update {
+    // ... (rest of method)
                         it.copy(
                             isAiAnalyzing = false,
                             aiMealDescriptionInput = "",

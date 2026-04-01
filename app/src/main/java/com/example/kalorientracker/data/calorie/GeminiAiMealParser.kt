@@ -1,5 +1,6 @@
 package com.example.kalorientracker.data.calorie
 
+import android.util.Log
 import com.example.kalorientracker.domain.calorie.AiMealAnalysisResult
 import com.example.kalorientracker.domain.calorie.AiMealParser
 import com.example.kalorientracker.domain.calorie.AiParsedMeal
@@ -18,6 +19,7 @@ class GeminiAiMealParser(
 ) : AiMealParser {
 
     override fun updateApiKey(apiKey: String) {
+        Log.d("GeminiAiMealParser", "API Key updated (length: ${apiKey.length})")
         this.apiKey = apiKey
     }
 
@@ -32,7 +34,15 @@ class GeminiAiMealParser(
         description: String,
         model: SupportedAiModel
     ): AiMealAnalysisResult = withContext(Dispatchers.IO) {
+        Log.d("GeminiAiMealParser", "Starting analysis with model: ${model.modelId}")
+        Log.d("GeminiAiMealParser", "Description: $description")
+
         try {
+            if (apiKey.isBlank()) {
+                Log.e("GeminiAiMealParser", "API Key is blank!")
+                return@withContext AiMealAnalysisResult.Error("API Key is missing. Please configure it in settings.")
+            }
+
             val generativeModel = GenerativeModel(
                 modelName = model.modelId,
                 apiKey = apiKey,
@@ -43,25 +53,32 @@ class GeminiAiMealParser(
             )
 
             val response = generativeModel.generateContent(description)
-            val jsonString = response.text ?: return@withContext AiMealAnalysisResult.Error("No response from AI")
-// ... (rest of method)
+            val jsonString = response.text
+            Log.d("GeminiAiMealParser", "Raw AI Response: $jsonString")
+
+            if (jsonString == null) {
+                Log.e("GeminiAiMealParser", "Response text is null")
+                return@withContext AiMealAnalysisResult.Error("No response from AI")
+            }
+
             val jsonArray = JSONArray(jsonString)
             val meals = mutableListOf<AiParsedMeal>()
-            
+
             for (i in 0 until jsonArray.length()) {
                 val obj = jsonArray.getJSONObject(i)
-                meals.add(
-                    AiParsedMeal(
-                        name = obj.getString("name"),
-                        calories = obj.getInt("calories"),
-                        type = CalorieEntryType.valueOf(obj.getString("type")),
-                        source = CalorieEntrySource.valueOf(obj.getString("source"))
-                    )
+                val meal = AiParsedMeal(
+                    name = obj.getString("name"),
+                    calories = obj.getInt("calories"),
+                    type = CalorieEntryType.valueOf(obj.getString("type")),
+                    source = CalorieEntrySource.valueOf(obj.getString("source"))
                 )
+                meals.add(meal)
+                Log.d("GeminiAiMealParser", "Parsed meal: $meal")
             }
-            
+
             AiMealAnalysisResult.Success(meals)
         } catch (e: Exception) {
+            Log.e("GeminiAiMealParser", "Error during AI analysis", e)
             AiMealAnalysisResult.Error(e.message ?: "Unknown error during AI analysis")
         }
     }
