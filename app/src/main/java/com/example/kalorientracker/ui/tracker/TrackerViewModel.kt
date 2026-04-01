@@ -185,7 +185,7 @@ class TrackerViewModel(
                 is AiMealAnalysisResult.Success -> {
                     Log.d("TrackerViewModel", "AI Analysis succeeded with ${result.meals.size} items")
                     val firstMeal = result.meals.firstOrNull()
-    // ... (rest of method)
+                    _uiState.update {
                         it.copy(
                             isAiAnalyzing = false,
                             aiMealDescriptionInput = "",
