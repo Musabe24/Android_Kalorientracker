@@ -26,10 +26,13 @@ import com.example.kalorientracker.domain.calorie.UpdateGoalTargetResult
 import com.example.kalorientracker.domain.calorie.UpdateGoalTargetUseCase
 import java.time.Clock
 import java.time.LocalDate
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -44,7 +47,8 @@ class TrackerViewModel(
     private val updateGoalTargetUseCase: UpdateGoalTargetUseCase,
     private val calculateGoalProgressUseCase: CalculateGoalProgressUseCase,
     private val portionCalorieCalculator: PortionCalorieCalculator,
-    private val clock: Clock
+    private val clock: Clock,
+    dayTickerFlow: kotlinx.coroutines.flow.Flow<Long>? = null
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(
         TrackerUiState(
@@ -54,6 +58,13 @@ class TrackerViewModel(
     )
     val uiState: StateFlow<TrackerUiState> = _uiState.asStateFlow()
 
+    private val dayTicker = dayTickerFlow ?: flow {
+        while (true) {
+            emit(LocalDate.now(clock).toEpochDay())
+            delay(60_000) // Check every minute
+        }
+    }.distinctUntilChanged()
+
     init {
         viewModelScope.launch {
             combine(
@@ -61,8 +72,16 @@ class TrackerViewModel(
                 loadCalorieHistoryUseCase.observe(),
                 loadCalorieTimelineTrendUseCase.observe(),
                 loadWeeklyCalorieTrendUseCase.observe(),
-                loadGoalTargetUseCase.observe()
-            ) { overview, historyDays, timelineTrend, weeklyTrend, targetCalories ->
+                loadGoalTargetUseCase.observe(),
+                dayTicker
+            ) { args: Array<Any> ->
+                val overview = args[0] as com.example.kalorientracker.domain.calorie.CalorieOverview
+                val historyDays = args[1] as List<com.example.kalorientracker.domain.calorie.CalorieHistoryDay>
+                val timelineTrend = args[2] as List<com.example.kalorientracker.domain.calorie.DailyCalorieTrendPoint>
+                val weeklyTrend = args[3] as List<com.example.kalorientracker.domain.calorie.DailyCalorieTrendPoint>
+                val targetCalories = args[4] as Int
+                val currentEpochDay = args[5] as Long
+
                 TrackerObservedState(
                     overview = overview,
                     historyDays = historyDays,
@@ -73,25 +92,25 @@ class TrackerViewModel(
                         netCalories = overview.summary.netCalories,
                         weeklyTrend = weeklyTrend,
                         targetCalories = targetCalories
-                    )
+                    ),
+                    currentEpochDay = currentEpochDay
                 )
             }.collect { observedState ->
-                val currentEpochDay = LocalDate.now(clock).toEpochDay()
                 _uiState.update { currentState ->
                     currentState.copy(
-                        dayNumber = LocalDate.ofEpochDay(currentEpochDay).dayOfMonth,
+                        dayNumber = LocalDate.ofEpochDay(observedState.currentEpochDay).dayOfMonth,
                         entries = observedState.overview.entries,
                         historyDays = observedState.historyDays,
                         timelineTrend = observedState.timelineTrend,
                         weeklyTrend = observedState.weeklyTrend,
                         goalProgressInsights = observedState.goalProgressInsights,
                         targetCalories = observedState.targetCalories,
-                        currentEpochDay = currentEpochDay,
+                        currentEpochDay = observedState.currentEpochDay,
                         selectedTrendWindowEndEpochDay = currentState.selectedTrendWindowEndEpochDay
-                            ?.coerceAtMost(currentEpochDay)
-                            ?: currentEpochDay,
+                            ?.coerceAtMost(observedState.currentEpochDay)
+                            ?: observedState.currentEpochDay,
                         entryRecordedOnEpochDay = currentState.entryRecordedOnEpochDay
-                            .coerceAtMost(currentEpochDay),
+                            .coerceAtMost(observedState.currentEpochDay),
                         totalIntake = observedState.overview.summary.totalIntake,
                         totalBurned = observedState.overview.summary.totalBurned,
                         netCalories = observedState.overview.summary.netCalories
@@ -198,6 +217,14 @@ class TrackerViewModel(
         _uiState.update { currentState ->
             currentState.copy(entryRecordedOnEpochDay = currentState.currentEpochDay)
         }
+    }
+
+    fun showDatePicker() {
+        _uiState.update { it.copy(isDatePickerVisible = true) }
+    }
+
+    fun dismissDatePicker() {
+        _uiState.update { it.copy(isDatePickerVisible = false) }
     }
 
     fun startEditingGoalTarget() {
@@ -445,5 +472,6 @@ private data class TrackerObservedState(
     val timelineTrend: List<com.example.kalorientracker.domain.calorie.DailyCalorieTrendPoint>,
     val weeklyTrend: List<com.example.kalorientracker.domain.calorie.DailyCalorieTrendPoint>,
     val targetCalories: Int,
-    val goalProgressInsights: GoalProgressInsights
+    val goalProgressInsights: GoalProgressInsights,
+    val currentEpochDay: Long
 )

@@ -23,8 +23,10 @@ import com.example.kalorientracker.testutil.InMemoryCalorieEntryRepository
 import com.example.kalorientracker.testutil.InMemoryGoalTargetRepository
 import com.example.kalorientracker.testutil.MainDispatcherRule
 import com.example.kalorientracker.testutil.fixedTestClock
+import java.time.LocalDate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -43,7 +45,7 @@ class TrackerViewModelTest {
     fun `view model starts with first day and no entries`() = runTest {
         val viewModel = createViewModel()
 
-        advanceUntilIdle()
+        runCurrent()
 
         val uiState = viewModel.uiState.value
         assertEquals(28, uiState.dayNumber)
@@ -58,12 +60,12 @@ class TrackerViewModelTest {
     fun `save entry updates summary for intake`() = runTest {
         val viewModel = createViewModel()
 
-        advanceUntilIdle()
+        runCurrent()
         viewModel.onEntryNameChanged("Greek yogurt")
         viewModel.onCalorieInputChanged("500")
         viewModel.onEntrySourceSelected(CalorieEntrySource.MEAL)
         viewModel.saveEntry()
-        advanceUntilIdle()
+        runCurrent()
 
         val uiState = viewModel.uiState.value
         assertEquals(1, uiState.entries.size)
@@ -78,16 +80,16 @@ class TrackerViewModelTest {
     fun `save entry updates summary for burned calories`() = runTest {
         val viewModel = createViewModel()
 
-        advanceUntilIdle()
+        runCurrent()
         viewModel.onCalorieInputChanged("600")
         viewModel.onEntrySourceSelected(CalorieEntrySource.MEAL)
         viewModel.saveEntry()
-        advanceUntilIdle()
+        runCurrent()
 
         viewModel.onCalorieInputChanged("250")
         viewModel.onEntrySourceSelected(CalorieEntrySource.WATCH)
         viewModel.saveEntry()
-        advanceUntilIdle()
+        runCurrent()
 
         val uiState = viewModel.uiState.value
         assertEquals(600, uiState.totalIntake)
@@ -99,10 +101,10 @@ class TrackerViewModelTest {
     fun `save entry with invalid calories exposes input error`() = runTest {
         val viewModel = createViewModel()
 
-        advanceUntilIdle()
+        runCurrent()
         viewModel.onCalorieInputChanged("0")
         viewModel.saveEntry()
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(CalorieInputValidationError.NonPositive, viewModel.uiState.value.inputError)
     }
@@ -111,13 +113,13 @@ class TrackerViewModelTest {
     fun `portion calculator mode saves calculated calories`() = runTest {
         val viewModel = createViewModel()
 
-        advanceUntilIdle()
+        runCurrent()
         viewModel.onEntryInputModeSelected(EntryInputMode.PortionCalculator)
         viewModel.onEntryNameChanged("Milk")
         viewModel.onConsumedAmountInputChanged("140")
         viewModel.onCaloriesPer100InputChanged("64")
         viewModel.saveEntry()
-        advanceUntilIdle()
+        runCurrent()
 
         val entry = viewModel.uiState.value.entries.single()
         assertEquals("Milk", entry.name)
@@ -128,12 +130,12 @@ class TrackerViewModelTest {
     fun `portion calculator mode exposes field specific errors`() = runTest {
         val viewModel = createViewModel()
 
-        advanceUntilIdle()
+        runCurrent()
         viewModel.onEntryInputModeSelected(EntryInputMode.PortionCalculator)
         viewModel.onConsumedAmountInputChanged("")
         viewModel.onCaloriesPer100InputChanged("0")
         viewModel.saveEntry()
-        advanceUntilIdle()
+        runCurrent()
 
         val uiState = viewModel.uiState.value
         assertEquals(CalorieInputValidationError.Blank, uiState.consumedAmountInputError)
@@ -157,14 +159,14 @@ class TrackerViewModelTest {
         )
         val viewModel = createViewModel(repository)
 
-        advanceUntilIdle()
+        runCurrent()
         viewModel.startEditing(repository.getEntries().single())
         assertEquals("Breakfast", viewModel.uiState.value.entryNameInput)
         viewModel.onEntryNameChanged("Cycling")
         viewModel.onCalorieInputChanged("450")
         viewModel.onEntryTypeSelected(CalorieEntryType.BURNED)
         viewModel.saveEntry()
-        advanceUntilIdle()
+        runCurrent()
 
         val uiState = viewModel.uiState.value
         assertEquals(1, uiState.entries.size)
@@ -189,10 +191,10 @@ class TrackerViewModelTest {
         )
         val viewModel = createViewModel(repository)
 
-        advanceUntilIdle()
+        runCurrent()
         viewModel.startEditing(repository.getEntries().single())
         viewModel.deleteEntry("entry-1")
-        advanceUntilIdle()
+        runCurrent()
 
         val uiState = viewModel.uiState.value
         assertTrue(uiState.entries.isEmpty())
@@ -212,7 +214,7 @@ class TrackerViewModelTest {
         val repository = InMemoryCalorieEntryRepository(initialEntries = listOf(entry))
         val viewModel = createViewModel(repository)
 
-        advanceUntilIdle()
+        runCurrent()
         viewModel.requestDeleteEntry(entry)
         assertEquals(entry, viewModel.uiState.value.pendingDeleteEntry)
 
@@ -232,10 +234,10 @@ class TrackerViewModelTest {
         val repository = InMemoryCalorieEntryRepository(initialEntries = listOf(entry))
         val viewModel = createViewModel(repository)
 
-        advanceUntilIdle()
+        runCurrent()
         viewModel.requestDeleteEntry(entry)
         viewModel.confirmDeleteEntry()
-        advanceUntilIdle()
+        runCurrent()
 
         assertTrue(viewModel.uiState.value.entries.isEmpty())
         assertNull(viewModel.uiState.value.pendingDeleteEntry)
@@ -263,7 +265,7 @@ class TrackerViewModelTest {
         )
         val viewModel = createViewModel(repository)
 
-        advanceUntilIdle()
+        runCurrent()
         assertEquals(1, viewModel.uiState.value.filteredHistoryDays.size)
 
         viewModel.selectHistoryFilter(HistoryFilter.AllTime)
@@ -296,7 +298,7 @@ class TrackerViewModelTest {
         )
         val viewModel = createViewModel(repository)
 
-        advanceUntilIdle()
+        runCurrent()
         assertEquals(30, viewModel.uiState.value.visibleTrendPoints.size)
 
         viewModel.selectTrendRange(TrendRange.AllTime)
@@ -310,7 +312,7 @@ class TrackerViewModelTest {
     fun `trend window navigation stays disabled when the timeline is empty`() = runTest {
         val viewModel = createViewModel()
 
-        advanceUntilIdle()
+        runCurrent()
         viewModel.selectTrendRange(TrendRange.SevenDays)
 
         val initialState = viewModel.uiState.value
@@ -349,7 +351,7 @@ class TrackerViewModelTest {
         )
         val viewModel = createViewModel(repository)
 
-        advanceUntilIdle()
+        runCurrent()
         viewModel.selectTrendRange(TrendRange.SevenDays)
         assertEquals(20534L, viewModel.uiState.value.visibleTrendPoints.first().epochDay)
         assertTrue(viewModel.uiState.value.canNavigateToEarlierTrendWindow)
@@ -367,7 +369,7 @@ class TrackerViewModelTest {
     fun `selecting meal or activity source infers the matching calorie direction`() = runTest {
         val viewModel = createViewModel()
 
-        advanceUntilIdle()
+        runCurrent()
         viewModel.onEntrySourceSelected(CalorieEntrySource.WATCH)
         assertEquals(CalorieEntryType.BURNED, viewModel.uiState.value.selectedType)
 
@@ -379,7 +381,7 @@ class TrackerViewModelTest {
     fun `manual source keeps the type picker visible`() = runTest {
         val viewModel = createViewModel()
 
-        advanceUntilIdle()
+        runCurrent()
         assertFalse(viewModel.uiState.value.showsManualTypePicker)
 
         viewModel.onEntrySourceSelected(CalorieEntrySource.MANUAL)
@@ -394,11 +396,11 @@ class TrackerViewModelTest {
     fun `save goal target updates dashboard target and exits edit mode`() = runTest {
         val viewModel = createViewModel()
 
-        advanceUntilIdle()
+        runCurrent()
         viewModel.startEditingGoalTarget()
         viewModel.onGoalTargetInputChanged("2600")
         viewModel.saveGoalTarget()
-        advanceUntilIdle()
+        runCurrent()
 
         val uiState = viewModel.uiState.value
         assertEquals(2600, uiState.targetCalories)
@@ -411,11 +413,11 @@ class TrackerViewModelTest {
     fun `save goal target with invalid input exposes validation error`() = runTest {
         val viewModel = createViewModel()
 
-        advanceUntilIdle()
+        runCurrent()
         viewModel.startEditingGoalTarget()
         viewModel.onGoalTargetInputChanged("abc")
         viewModel.saveGoalTarget()
-        advanceUntilIdle()
+        runCurrent()
 
         val uiState = viewModel.uiState.value
         assertTrue(uiState.isEditingGoalTarget)
@@ -427,11 +429,12 @@ class TrackerViewModelTest {
         repository: CalorieEntryRepository = InMemoryCalorieEntryRepository(),
         goalTargetRepository: GoalTargetRepository = InMemoryGoalTargetRepository()
     ): TrackerViewModel {
+        val clock = fixedTestClock()
         return TrackerViewModel(
             saveCalorieEntryUseCase = SaveCalorieEntryUseCase(
                 repository = repository,
                 inputValidator = CalorieInputValidator(),
-                clock = fixedTestClock()
+                clock = clock
             ),
             deleteCalorieEntryUseCase = DeleteCalorieEntryUseCase(
                 repository = repository
@@ -443,17 +446,17 @@ class TrackerViewModelTest {
             loadCalorieTimelineTrendUseCase = LoadCalorieTimelineTrendUseCase(
                 repository = repository,
                 dailyCalorieCalculator = DailyCalorieCalculator(),
-                clock = fixedTestClock()
+                clock = clock
             ),
             loadCalorieOverviewUseCase = LoadCalorieOverviewUseCase(
                 repository = repository,
                 dailyCalorieCalculator = DailyCalorieCalculator(),
-                clock = fixedTestClock()
+                clock = clock
             ),
             loadWeeklyCalorieTrendUseCase = LoadWeeklyCalorieTrendUseCase(
                 repository = repository,
                 dailyCalorieCalculator = DailyCalorieCalculator(),
-                clock = fixedTestClock()
+                clock = clock
             ),
             loadGoalTargetUseCase = LoadGoalTargetUseCase(
                 repository = goalTargetRepository
@@ -465,7 +468,8 @@ class TrackerViewModelTest {
             portionCalorieCalculator = PortionCalorieCalculator(
                 inputValidator = CalorieInputValidator()
             ),
-            clock = fixedTestClock()
+            clock = clock,
+            dayTickerFlow = flowOf(LocalDate.now(clock).toEpochDay())
         )
     }
 }

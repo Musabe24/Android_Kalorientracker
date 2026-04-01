@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -118,9 +119,9 @@ internal fun TrendSection(
                 Row(
                     modifier = Modifier
                         .horizontalScroll(rememberScrollState())
-                        .heightIn(min = 164.dp),
+                        .height(200.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.Bottom
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     visibleTrendPoints.forEach { point ->
                         TrendBar(
@@ -142,7 +143,7 @@ private fun TrendBar(
     isCondensed: Boolean
 ) {
     val accent = if (point.netCalories >= 0) Olive else Coral
-    val fillFraction = (abs(point.netCalories).toFloat() / maxNet.toFloat()).coerceIn(0.14f, 1f)
+    val fillFraction = (abs(point.netCalories).toFloat() / maxNet.toFloat()).coerceIn(0f, 1f)
     val barWidth = if (isCondensed) 24.dp else 38.dp
 
     Column(
@@ -150,31 +151,82 @@ private fun TrendBar(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            text = stringResource(R.string.compact_calorie_template, point.netCalories),
-            style = MaterialTheme.typography.bodySmall,
-            color = trackerSecondaryTextColor()
-        )
+        if (point.netCalories >= 0) {
+            Text(
+                text = stringResource(R.string.compact_calorie_template, point.netCalories),
+                style = MaterialTheme.typography.bodySmall,
+                color = trackerSecondaryTextColor()
+            )
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(112.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(trackerPanelColor(alpha = 0.85f)),
-            contentAlignment = Alignment.BottomCenter
+                .height(120.dp),
+            contentAlignment = Alignment.Center
         ) {
+            // Baseline
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxSize(fillFraction)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(accent.copy(alpha = 0.4f), accent)
+                    .height(1.dp)
+                    .background(trackerSecondaryTextColor().copy(alpha = 0.2f))
+            )
+
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Top half (Surplus)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    if (point.netCalories > 0) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight(fillFraction)
+                                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(accent.copy(alpha = 0.4f), accent)
+                                    )
+                                )
                         )
-                    )
+                    }
+                }
+                // Bottom half (Deficit)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    if (point.netCalories < 0) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight(fillFraction)
+                                .clip(RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp))
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(accent, accent.copy(alpha = 0.4f))
+                                    )
+                                )
+                        )
+                    }
+                }
+            }
+        }
+
+        if (point.netCalories < 0) {
+            Text(
+                text = stringResource(R.string.compact_calorie_template, point.netCalories),
+                style = MaterialTheme.typography.bodySmall,
+                color = trackerSecondaryTextColor()
             )
         }
+
         Text(
             text = LocalDate.ofEpochDay(point.epochDay).format(
                 if (isCondensed) compactTrendDayFormatter() else weekDayFormatter()

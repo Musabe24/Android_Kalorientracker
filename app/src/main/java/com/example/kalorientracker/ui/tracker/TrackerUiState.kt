@@ -20,6 +20,7 @@ data class TrackerUiState(
     val targetCalories: Int = 2200,
     val targetCaloriesInput: String = "",
     val isEditingGoalTarget: Boolean = false,
+    val isDatePickerVisible: Boolean = false,
     val currentEpochDay: Long = 0,
     val entryRecordedOnEpochDay: Long = 0,
     val selectedTrendRange: TrendRange = TrendRange.ThirtyDays,
@@ -47,9 +48,9 @@ data class TrackerUiState(
 
     val calculatedCaloriesPreview: Int?
         get() {
-            val consumedAmount = consumedAmountInput.toIntOrNull()
-            val caloriesPer100 = caloriesPer100Input.toIntOrNull()
-            if (consumedAmount == null || caloriesPer100 == null || consumedAmount <= 0 || caloriesPer100 <= 0) {
+            val consumedAmount = consumedAmountInput.toDoubleOrNull()
+            val caloriesPer100 = caloriesPer100Input.toDoubleOrNull()
+            if (consumedAmount == null || caloriesPer100 == null || consumedAmount <= 0.0 || caloriesPer100 <= 0.0) {
                 return null
             }
 

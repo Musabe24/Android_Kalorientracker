@@ -13,13 +13,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -35,6 +41,10 @@ import com.example.kalorientracker.ui.theme.Ink
 import com.example.kalorientracker.ui.theme.KalorientrackerTheme
 import com.example.kalorientracker.ui.theme.Olive
 import com.example.kalorientracker.ui.theme.Sky
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZoneOffset
 
 object TrackerScreenTestTags {
     const val CALORIE_INPUT_FIELD = "calorie_input_field"
@@ -71,6 +81,9 @@ fun TrackerScreen(viewModel: TrackerViewModel, modifier: Modifier = Modifier) {
         onGoalTargetInputChanged = viewModel::onGoalTargetInputChanged,
         onCancelGoalTargetEditing = viewModel::cancelGoalTargetEditing,
         onSaveGoalTarget = viewModel::saveGoalTarget,
+        onShowDatePicker = viewModel::showDatePicker,
+        onDismissDatePicker = viewModel::dismissDatePicker,
+        onDateSelected = viewModel::onEntryDateSelected,
         modifier = modifier
     )
 }
@@ -103,6 +116,9 @@ fun TrackerContent(
     onGoalTargetInputChanged: (String) -> Unit,
     onCancelGoalTargetEditing: () -> Unit,
     onSaveGoalTarget: () -> Unit,
+    onShowDatePicker: () -> Unit,
+    onDismissDatePicker: () -> Unit,
+    onDateSelected: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -144,6 +160,7 @@ fun TrackerContent(
                     onCancelEditingClicked = onCancelEditingClicked,
                     onEditEntryClicked = onEditEntryClicked,
                     onDeleteEntryClicked = onDeleteEntryClicked,
+                    onShowDatePicker = onShowDatePicker,
                     contentPadding = PaddingValues(20.dp)
                 )
 
@@ -160,6 +177,18 @@ fun TrackerContent(
         TrackerBottomNavigation(
             selectedDestination = uiState.selectedDestination,
             onSelectDestination = onSelectDestination
+        )
+    }
+
+    if (uiState.isDatePickerVisible) {
+        TrackerDatePickerDialog(
+            initialEpochDay = uiState.entryRecordedOnEpochDay,
+            maxEpochDay = uiState.currentEpochDay,
+            onDismiss = onDismissDatePicker,
+            onDateSelected = {
+                onDateSelected(it)
+                onDismissDatePicker()
+            }
         )
     }
 
@@ -253,6 +282,59 @@ private fun DeleteEntryDialog(
             }
         }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TrackerDatePickerDialog(
+    initialEpochDay: Long,
+    maxEpochDay: Long,
+    onDismiss: () -> Unit,
+    onDateSelected: (Long) -> Unit
+) {
+    val initialMillis = LocalDate.ofEpochDay(initialEpochDay)
+        .atStartOfDay(ZoneOffset.UTC)
+        .toInstant()
+        .toEpochMilli()
+
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = initialMillis,
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                val maxMillis = LocalDate.ofEpochDay(maxEpochDay)
+                    .atStartOfDay(ZoneOffset.UTC)
+                    .toInstant()
+                    .toEpochMilli()
+                return utcTimeMillis <= maxMillis
+            }
+        }
+    )
+
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val selectedDate = Instant.ofEpochMilli(millis)
+                            .atZone(ZoneOffset.UTC)
+                            .toLocalDate()
+                        onDateSelected(selectedDate.toEpochDay())
+                    }
+                }
+            ) {
+                Text(stringResource(R.string.goal_target_save_button))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.goal_target_cancel_button))
+            }
+        },
+        colors = DatePickerDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        DatePicker(state = datePickerState)
+    }
 }
 
 private data class NavigationItem(

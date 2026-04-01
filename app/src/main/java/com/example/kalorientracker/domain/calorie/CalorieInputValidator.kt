@@ -15,7 +15,9 @@ class CalorieInputValidator {
             return ValidationResult.Invalid(CalorieInputValidationError.Blank)
         }
 
+        // Try to parse as integer first, then as double and round if needed
         val parsedCalories = rawValue.toIntOrNull()
+            ?: rawValue.toDoubleOrNull()?.let { kotlin.math.round(it).toInt() }
             ?: return ValidationResult.Invalid(CalorieInputValidationError.NotWholeNumber)
 
         if (parsedCalories <= 0) {

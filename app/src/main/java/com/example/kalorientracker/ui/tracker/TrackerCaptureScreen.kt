@@ -1,5 +1,6 @@
 package com.example.kalorientracker.ui.tracker
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
@@ -55,6 +56,7 @@ fun TrackerCaptureScreen(
     onCancelEditingClicked: () -> Unit,
     onEditEntryClicked: (CalorieEntry) -> Unit,
     onDeleteEntryClicked: (CalorieEntry) -> Unit,
+    onShowDatePicker: () -> Unit,
     contentPadding: PaddingValues
 ) {
     LazyColumn(
@@ -85,7 +87,8 @@ fun TrackerCaptureScreen(
                 onShowNextEntryDate = onShowNextEntryDate,
                 onResetEntryDateToToday = onResetEntryDateToToday,
                 onSaveEntryClicked = onSaveEntryClicked,
-                onCancelEditingClicked = onCancelEditingClicked
+                onCancelEditingClicked = onCancelEditingClicked,
+                onShowDatePicker = onShowDatePicker
             )
         }
         item {
@@ -129,7 +132,8 @@ private fun EntryComposerCard(
     onShowNextEntryDate: () -> Unit,
     onResetEntryDateToToday: () -> Unit,
     onSaveEntryClicked: () -> Unit,
-    onCancelEditingClicked: () -> Unit
+    onCancelEditingClicked: () -> Unit,
+    onShowDatePicker: () -> Unit
 ) {
     Card(
         shape = RoundedCornerShape(28.dp),
@@ -154,7 +158,8 @@ private fun EntryComposerCard(
                 uiState = uiState,
                 onShowPreviousEntryDate = onShowPreviousEntryDate,
                 onShowNextEntryDate = onShowNextEntryDate,
-                onResetEntryDateToToday = onResetEntryDateToToday
+                onResetEntryDateToToday = onResetEntryDateToToday,
+                onShowDatePicker = onShowDatePicker
             )
 
             SelectionGroup(
@@ -322,7 +327,8 @@ private fun EntryDateSelector(
     uiState: TrackerUiState,
     onShowPreviousEntryDate: () -> Unit,
     onShowNextEntryDate: () -> Unit,
-    onResetEntryDateToToday: () -> Unit
+    onResetEntryDateToToday: () -> Unit,
+    onShowDatePicker: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -341,7 +347,9 @@ private fun EntryDateSelector(
                 text = LocalDate.ofEpochDay(uiState.entryRecordedOnEpochDay).format(entryDateFormatter()),
                 style = MaterialTheme.typography.bodyLarge,
                 color = trackerPrimaryTextColor(),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onShowDatePicker() }
             )
             TextButton(
                 onClick = onShowNextEntryDate,
