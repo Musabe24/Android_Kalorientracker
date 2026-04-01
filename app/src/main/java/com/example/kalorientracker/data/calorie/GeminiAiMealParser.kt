@@ -19,8 +19,9 @@ class GeminiAiMealParser(
 ) : AiMealParser {
 
     override fun updateApiKey(apiKey: String) {
-        Log.d("GeminiAiMealParser", "API Key updated (length: ${apiKey.length})")
-        this.apiKey = apiKey
+        val trimmedKey = apiKey.trim()
+        Log.d("GeminiAiMealParser", "API Key updated (length: ${trimmedKey.length})")
+        this.apiKey = trimmedKey
     }
 
     private val systemInstructionText =

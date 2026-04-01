@@ -15,8 +15,9 @@ class SharedPreferencesSettingsRepository(
     override fun getAiApiKey(): Flow<String?> = _apiKeyFlow.asStateFlow()
 
     override suspend fun saveAiApiKey(apiKey: String) {
-        sharedPreferences.edit().putString(KEY_AI_API_KEY, apiKey).apply()
-        _apiKeyFlow.value = apiKey
+        val trimmedKey = apiKey.trim()
+        sharedPreferences.edit().putString(KEY_AI_API_KEY, trimmedKey).apply()
+        _apiKeyFlow.value = trimmedKey
     }
 
     private fun loadApiKey(): String? {
