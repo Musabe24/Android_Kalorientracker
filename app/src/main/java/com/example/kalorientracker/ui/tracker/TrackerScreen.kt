@@ -84,6 +84,8 @@ fun TrackerScreen(viewModel: TrackerViewModel, modifier: Modifier = Modifier) {
         onShowDatePicker = viewModel::showDatePicker,
         onDismissDatePicker = viewModel::dismissDatePicker,
         onDateSelected = viewModel::onEntryDateSelected,
+        onAiMealDescriptionChanged = viewModel::onAiMealDescriptionChanged,
+        onAnalyzeMealWithAi = viewModel::analyzeMealWithAi,
         modifier = modifier
     )
 }
@@ -119,6 +121,8 @@ fun TrackerContent(
     onShowDatePicker: () -> Unit,
     onDismissDatePicker: () -> Unit,
     onDateSelected: (Long) -> Unit,
+    onAiMealDescriptionChanged: (String) -> Unit,
+    onAnalyzeMealWithAi: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -161,6 +165,8 @@ fun TrackerContent(
                     onEditEntryClicked = onEditEntryClicked,
                     onDeleteEntryClicked = onDeleteEntryClicked,
                     onShowDatePicker = onShowDatePicker,
+                    onAiMealDescriptionChanged = onAiMealDescriptionChanged,
+                    onAnalyzeMealWithAi = onAnalyzeMealWithAi,
                     contentPadding = PaddingValues(20.dp)
                 )
 

@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.kalorientracker.app.TrackerAppContainer
+import com.example.kalorientracker.domain.calorie.AiMealAnalysisResult
+import com.example.kalorientracker.domain.calorie.AnalyzeMealUseCase
 import com.example.kalorientracker.domain.calorie.CalorieEntry
 import com.example.kalorientracker.domain.calorie.CalorieEntrySource
 import com.example.kalorientracker.domain.calorie.CalorieEntryType
@@ -45,6 +47,7 @@ class TrackerViewModel(
     private val loadWeeklyCalorieTrendUseCase: LoadWeeklyCalorieTrendUseCase,
     private val loadGoalTargetUseCase: LoadGoalTargetUseCase,
     private val updateGoalTargetUseCase: UpdateGoalTargetUseCase,
+    private val analyzeMealUseCase: AnalyzeMealUseCase,
     private val calculateGoalProgressUseCase: CalculateGoalProgressUseCase,
     private val portionCalorieCalculator: PortionCalorieCalculator,
     private val clock: Clock,
@@ -115,6 +118,39 @@ class TrackerViewModel(
                         totalBurned = observedState.overview.summary.totalBurned,
                         netCalories = observedState.overview.summary.netCalories
                     )
+                }
+            }
+        }
+    }
+
+    fun onAiMealDescriptionChanged(value: String) {
+        _uiState.update { it.copy(aiMealDescriptionInput = value, aiAnalysisError = null) }
+    }
+
+    fun analyzeMealWithAi() {
+        val description = _uiState.value.aiMealDescriptionInput
+        if (description.isBlank()) return
+
+        _uiState.update { it.copy(isAiAnalyzing = true, aiAnalysisError = null) }
+
+        viewModelScope.launch {
+            when (val result = analyzeMealUseCase(description)) {
+                is AiMealAnalysisResult.Error -> {
+                    _uiState.update { it.copy(isAiAnalyzing = false, aiAnalysisError = result.message) }
+                }
+
+                is AiMealAnalysisResult.Success -> {
+                    val firstMeal = result.meals.firstOrNull()
+                    _uiState.update {
+                        it.copy(
+                            isAiAnalyzing = false,
+                            aiMealDescriptionInput = "",
+                            entryNameInput = firstMeal?.name ?: it.entryNameInput,
+                            calorieInput = firstMeal?.calories?.toString() ?: it.calorieInput,
+                            selectedType = firstMeal?.type ?: it.selectedType,
+                            selectedSource = firstMeal?.source ?: it.selectedSource
+                        )
+                    }
                 }
             }
         }
@@ -457,6 +493,7 @@ class TrackerViewModel(
                     loadWeeklyCalorieTrendUseCase = appContainer.loadWeeklyCalorieTrendUseCase,
                     loadGoalTargetUseCase = appContainer.loadGoalTargetUseCase,
                     updateGoalTargetUseCase = appContainer.updateGoalTargetUseCase,
+                    analyzeMealUseCase = appContainer.analyzeMealUseCase,
                     calculateGoalProgressUseCase = appContainer.calculateGoalProgressUseCase,
                     portionCalorieCalculator = appContainer.portionCalorieCalculator,
                     clock = appContainer.clock

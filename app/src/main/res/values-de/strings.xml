@@ -115,4 +115,5 @@
     <string name="entry_date_template">Erfasst am %1$s</string>
     <string name="edit_entry_button">Bearbeiten</string>
     <string name="delete_entry_button">Löschen</string>
+    <string name="google_ai_api_key">PLATZHALTER_FÜR_DEINEN_API_KEY</string>
 </resources>

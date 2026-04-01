@@ -16,6 +16,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -27,6 +28,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.size
 import com.example.kalorientracker.R
 import com.example.kalorientracker.domain.calorie.CalorieEntry
 import com.example.kalorientracker.domain.calorie.CalorieEntrySource
@@ -57,6 +59,8 @@ fun TrackerCaptureScreen(
     onEditEntryClicked: (CalorieEntry) -> Unit,
     onDeleteEntryClicked: (CalorieEntry) -> Unit,
     onShowDatePicker: () -> Unit,
+    onAiMealDescriptionChanged: (String) -> Unit,
+    onAnalyzeMealWithAi: () -> Unit,
     contentPadding: PaddingValues
 ) {
     LazyColumn(
@@ -88,7 +92,9 @@ fun TrackerCaptureScreen(
                 onResetEntryDateToToday = onResetEntryDateToToday,
                 onSaveEntryClicked = onSaveEntryClicked,
                 onCancelEditingClicked = onCancelEditingClicked,
-                onShowDatePicker = onShowDatePicker
+                onShowDatePicker = onShowDatePicker,
+                onAiMealDescriptionChanged = onAiMealDescriptionChanged,
+                onAnalyzeMealWithAi = onAnalyzeMealWithAi
             )
         }
         item {
@@ -133,7 +139,9 @@ private fun EntryComposerCard(
     onResetEntryDateToToday: () -> Unit,
     onSaveEntryClicked: () -> Unit,
     onCancelEditingClicked: () -> Unit,
-    onShowDatePicker: () -> Unit
+    onShowDatePicker: () -> Unit,
+    onAiMealDescriptionChanged: (String) -> Unit,
+    onAnalyzeMealWithAi: () -> Unit
 ) {
     Card(
         shape = RoundedCornerShape(28.dp),
@@ -144,6 +152,16 @@ private fun EntryComposerCard(
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            if (uiState.showsMagicInput) {
+                MagicInputSection(
+                    input = uiState.aiMealDescriptionInput,
+                    isAnalyzing = uiState.isAiAnalyzing,
+                    error = uiState.aiAnalysisError,
+                    onInputChanged = onAiMealDescriptionChanged,
+                    onAnalyzeClicked = onAnalyzeMealWithAi
+                )
+            }
+
             OutlinedTextField(
                 value = uiState.entryNameInput,
                 onValueChange = onEntryNameChanged,
@@ -360,6 +378,71 @@ private fun EntryDateSelector(
         }
         TextButton(onClick = onResetEntryDateToToday) {
             Text(text = stringResource(R.string.entry_date_today))
+        }
+    }
+}
+
+@Composable
+private fun MagicInputSection(
+    input: String,
+    isAnalyzing: Boolean,
+    error: String?,
+    onInputChanged: (String) -> Unit,
+    onAnalyzeClicked: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Magic Log (AI)",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = "Describe your meal and let AI fill the form for you.",
+                style = MaterialTheme.typography.bodySmall,
+                color = trackerSecondaryTextColor()
+            )
+            OutlinedTextField(
+                value = input,
+                onValueChange = onInputChanged,
+                label = { Text("e.g., A large apple and black coffee") },
+                enabled = !isAnalyzing,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (error != null) {
+                Text(
+                    text = error,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            Button(
+                onClick = onAnalyzeClicked,
+                enabled = input.isNotBlank() && !isAnalyzing,
+                modifier = Modifier.align(Alignment.End),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            ) {
+                if (isAnalyzing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Analyze")
+                }
+            }
         }
     }
 }

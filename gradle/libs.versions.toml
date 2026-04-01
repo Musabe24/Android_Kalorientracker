@@ -12,8 +12,10 @@ room = "2.7.2"
 ksp = "2.2.10-2.0.2"
 coroutinesTest = "1.10.2"
 desugarJdkLibs = "2.1.5"
+generativeai = "0.9.0"
 
 [libraries]
+generativeai = { group = "com.google.ai.client.generativeai", name = "generativeai", version.ref = "generativeai" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }

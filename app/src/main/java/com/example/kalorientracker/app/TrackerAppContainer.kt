@@ -31,6 +31,7 @@ interface TrackerAppContainer {
     val loadWeeklyCalorieTrendUseCase: LoadWeeklyCalorieTrendUseCase
     val loadGoalTargetUseCase: LoadGoalTargetUseCase
     val updateGoalTargetUseCase: UpdateGoalTargetUseCase
+    val analyzeMealUseCase: com.example.kalorientracker.domain.calorie.AnalyzeMealUseCase
     val calculateGoalProgressUseCase: CalculateGoalProgressUseCase
     val portionCalorieCalculator: PortionCalorieCalculator
 }
@@ -122,6 +123,14 @@ class DefaultTrackerAppContainer(context: Context) : TrackerAppContainer {
 
     override val updateGoalTargetUseCase: UpdateGoalTargetUseCase by lazy {
         UpdateGoalTargetUseCase(repository = goalTargetRepository)
+    }
+
+    override val analyzeMealUseCase: com.example.kalorientracker.domain.calorie.AnalyzeMealUseCase by lazy {
+        com.example.kalorientracker.domain.calorie.AnalyzeMealUseCase(
+            aiMealParser = com.example.kalorientracker.data.calorie.GeminiAiMealParser(
+                apiKey = context.getString(com.example.kalorientracker.R.string.google_ai_api_key)
+            )
+        )
     }
 
     override val calculateGoalProgressUseCase: CalculateGoalProgressUseCase = CalculateGoalProgressUseCase()

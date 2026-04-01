@@ -39,6 +39,9 @@ data class TrackerUiState(
     val consumedAmountInputError: CalorieInputValidationError? = null,
     val caloriesPer100InputError: CalorieInputValidationError? = null,
     val goalTargetError: GoalTargetValidationError? = null,
+    val aiMealDescriptionInput: String = "",
+    val isAiAnalyzing: Boolean = false,
+    val aiAnalysisError: String? = null,
     val totalIntake: Int = 0,
     val totalBurned: Int = 0,
     val netCalories: Int = 0
@@ -68,6 +71,9 @@ data class TrackerUiState(
 
     val showsManualTypePicker: Boolean
         get() = selectedSource == CalorieEntrySource.MANUAL
+
+    val showsMagicInput: Boolean
+        get() = usesDirectCalorieInput && !isEditing
 
     val usesDirectCalorieInput: Boolean
         get() = entryInputMode == EntryInputMode.DirectCalories

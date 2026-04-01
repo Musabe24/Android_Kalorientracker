@@ -115,4 +115,5 @@
     <string name="entry_date_template">Recorded on %1$s</string>
     <string name="edit_entry_button">Edit</string>
     <string name="delete_entry_button">Delete</string>
+    <string name="google_ai_api_key">REPLACE_WITH_YOUR_API_KEY</string>
 </resources>
