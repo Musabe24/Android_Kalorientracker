@@ -91,38 +91,31 @@ internal fun averageEntryCalories(uiState: TrackerUiState): Int {
     return if (uiState.entries.isEmpty()) 0 else uiState.entries.sumOf { it.amount } / uiState.entries.size
 }
 
-private val cachedHistoryDateFormatter: DateTimeFormatter by lazy {
-    DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.getDefault())
+private val formatterCache = java.util.concurrent.ConcurrentHashMap<Pair<String, Locale>, DateTimeFormatter>()
+
+private fun getOrCreateFormatter(pattern: String, locale: Locale = Locale.getDefault()): DateTimeFormatter {
+    return formatterCache.computeIfAbsent(pattern to locale) { (p, l) ->
+        DateTimeFormatter.ofPattern(p, l)
+    }
 }
 
-private val cachedEntryDateFormatter: DateTimeFormatter by lazy {
-    DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
-}
+internal fun historyDateFormatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
+    getOrCreateFormatter("EEEE, MMM d", locale)
 
-private val cachedWeekDayFormatter: DateTimeFormatter by lazy {
-    DateTimeFormatter.ofPattern("EEE", Locale.getDefault())
-}
+internal fun entryDateFormatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
+    getOrCreateFormatter("EEE, MMM d", locale)
 
-private val cachedCompactTrendDayFormatter: DateTimeFormatter by lazy {
-    DateTimeFormatter.ofPattern("MM/dd", Locale.getDefault())
-}
+internal fun weekDayFormatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
+    getOrCreateFormatter("EEE", locale)
 
-private val cachedTrendWindowFormatter: DateTimeFormatter by lazy {
-    DateTimeFormatter.ofPattern("MMM d", Locale.getDefault())
-}
+internal fun compactTrendDayFormatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
+    getOrCreateFormatter("MM/dd", locale)
 
-internal fun historyDateFormatter(): DateTimeFormatter = cachedHistoryDateFormatter
-
-internal fun entryDateFormatter(): DateTimeFormatter = cachedEntryDateFormatter
-
-internal fun weekDayFormatter(): DateTimeFormatter = cachedWeekDayFormatter
-
-internal fun compactTrendDayFormatter(): DateTimeFormatter = cachedCompactTrendDayFormatter
-
-internal fun trendWindowFormatter(): DateTimeFormatter = cachedTrendWindowFormatter
+internal fun trendWindowFormatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
+    getOrCreateFormatter("MMM d", locale)
 
 internal fun trendWindowLabel(startEpochDay: Long, endEpochDay: Long): String {
-    val formatter = cachedTrendWindowFormatter
+    val formatter = trendWindowFormatter()
     val start = LocalDate.ofEpochDay(startEpochDay).format(formatter)
     val end = LocalDate.ofEpochDay(endEpochDay).format(formatter)
     return "$start - $end"

@@ -164,10 +164,10 @@ private fun HistoryDayCard(
 
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 historyDay.entries.forEachIndexed { entryIndex, entry ->
-                    val onEdit = androidx.compose.runtime.remember(entry.id, onEditEntryClicked) {
+                    val onEdit = androidx.compose.runtime.remember(entry, onEditEntryClicked) {
                         { onEditEntryClicked(entry) }
                     }
-                    val onDelete = androidx.compose.runtime.remember(entry.id, onDeleteEntryClicked) {
+                    val onDelete = androidx.compose.runtime.remember(entry, onDeleteEntryClicked) {
                         { onDeleteEntryClicked(entry) }
                     }
                     EntryRowCard(

@@ -101,10 +101,10 @@ fun TrackerCaptureScreen(
                 key = { _, entry -> entry.id },
                 contentType = { _, _ -> "entry_row" }
             ) { index, entry ->
-                val onEdit = androidx.compose.runtime.remember(entry.id, onEditEntryClicked) {
+                val onEdit = androidx.compose.runtime.remember(entry, onEditEntryClicked) {
                     { onEditEntryClicked(entry) }
                 }
-                val onDelete = androidx.compose.runtime.remember(entry.id, onDeleteEntryClicked) {
+                val onDelete = androidx.compose.runtime.remember(entry, onDeleteEntryClicked) {
                     { onDeleteEntryClicked(entry) }
                 }
                 EntryRowCard(
