@@ -119,8 +119,11 @@ When multiple solutions are possible, prioritize in this order:
 - Mixing feature work with unrelated broad refactors in one PR
 
 ## 11) Agent workflow
+- **Branch-first workflow**: Never push directly to `main`. Every new feature, bug fix, or modification must be implemented on a dedicated feature branch (e.g. `feature/name` or `fix/name`).
 - Create a brief plan first for larger changes.
-- Prefer small, traceable commits.
+- Ensure all tests (`./gradlew test`) and builds pass locally before pushing.
+- Push the branch to `origin` and open a Pull Request (PR) against `main`.
+- Provide a clear, detailed PR description (Summary, Rationale, Validation, Screenshots if UI) so the user can easily review and approve it via the GitHub Mobile App.
 - Avoid silent side-refactorings unrelated to the task.
 - Respect existing structure; refactor only with clear value.
 - When uncertain, choose the option that is easiest for the next agent to understand and extend.
