@@ -94,6 +94,12 @@ private fun HeroSummaryCard(uiState: TrackerUiState) {
         stringResource(R.string.balance_surplus_label)
     }
 
+    val heroGradient = androidx.compose.runtime.remember {
+        Brush.linearGradient(
+            colors = listOf(Ink, OliveDeep.copy(alpha = 0.95f), Ink)
+        )
+    }
+
     Card(
         shape = RoundedCornerShape(32.dp),
         colors = CardDefaults.cardColors(containerColor = Ink),
@@ -102,11 +108,7 @@ private fun HeroSummaryCard(uiState: TrackerUiState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(Ink, OliveDeep.copy(alpha = 0.95f), Ink)
-                    )
-                )
+                .background(brush = heroGradient)
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {

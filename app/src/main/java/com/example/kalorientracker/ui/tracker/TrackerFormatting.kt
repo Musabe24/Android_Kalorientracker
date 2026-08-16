@@ -91,25 +91,28 @@ internal fun averageEntryCalories(uiState: TrackerUiState): Int {
     return if (uiState.entries.isEmpty()) 0 else uiState.entries.sumOf { it.amount } / uiState.entries.size
 }
 
-internal fun historyDateFormatter(): DateTimeFormatter {
-    return DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.getDefault())
+private val formatterCache = java.util.concurrent.ConcurrentHashMap<Pair<String, Locale>, DateTimeFormatter>()
+
+private fun getOrCreateFormatter(pattern: String, locale: Locale = Locale.getDefault()): DateTimeFormatter {
+    return formatterCache.computeIfAbsent(pattern to locale) { (p, l) ->
+        DateTimeFormatter.ofPattern(p, l)
+    }
 }
 
-internal fun entryDateFormatter(): DateTimeFormatter {
-    return DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
-}
+internal fun historyDateFormatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
+    getOrCreateFormatter("EEEE, MMM d", locale)
 
-internal fun weekDayFormatter(): DateTimeFormatter {
-    return DateTimeFormatter.ofPattern("EEE", Locale.getDefault())
-}
+internal fun entryDateFormatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
+    getOrCreateFormatter("EEE, MMM d", locale)
 
-internal fun compactTrendDayFormatter(): DateTimeFormatter {
-    return DateTimeFormatter.ofPattern("MM/dd", Locale.getDefault())
-}
+internal fun weekDayFormatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
+    getOrCreateFormatter("EEE", locale)
 
-internal fun trendWindowFormatter(): DateTimeFormatter {
-    return DateTimeFormatter.ofPattern("MMM d", Locale.getDefault())
-}
+internal fun compactTrendDayFormatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
+    getOrCreateFormatter("MM/dd", locale)
+
+internal fun trendWindowFormatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
+    getOrCreateFormatter("MMM d", locale)
 
 internal fun trendWindowLabel(startEpochDay: Long, endEpochDay: Long): String {
     val formatter = trendWindowFormatter()

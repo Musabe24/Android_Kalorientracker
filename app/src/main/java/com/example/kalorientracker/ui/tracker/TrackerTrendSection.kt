@@ -145,6 +145,18 @@ private fun TrendBar(
     val fillFraction = (abs(point.netCalories).toFloat() / maxNet.toFloat()).coerceIn(0.14f, 1f)
     val barWidth = if (isCondensed) 24.dp else 38.dp
 
+    val formattedDate = androidx.compose.runtime.remember(point.epochDay, isCondensed) {
+        LocalDate.ofEpochDay(point.epochDay).format(
+            if (isCondensed) compactTrendDayFormatter() else weekDayFormatter()
+        )
+    }
+
+    val gradientBrush = androidx.compose.runtime.remember(accent) {
+        Brush.verticalGradient(
+            colors = listOf(accent.copy(alpha = 0.4f), accent)
+        )
+    }
+
     Column(
         modifier = Modifier.width(barWidth),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -168,17 +180,11 @@ private fun TrendBar(
                     .fillMaxWidth()
                     .fillMaxSize(fillFraction)
                     .clip(RoundedCornerShape(18.dp))
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(accent.copy(alpha = 0.4f), accent)
-                        )
-                    )
+                    .background(brush = gradientBrush)
             )
         }
         Text(
-            text = LocalDate.ofEpochDay(point.epochDay).format(
-                if (isCondensed) compactTrendDayFormatter() else weekDayFormatter()
-            ),
+            text = formattedDate,
             style = MaterialTheme.typography.bodySmall,
             color = trackerPrimaryTextColor(),
             fontWeight = FontWeight.SemiBold

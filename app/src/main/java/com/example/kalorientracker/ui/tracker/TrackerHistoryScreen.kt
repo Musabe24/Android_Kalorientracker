@@ -74,7 +74,11 @@ fun TrackerHistoryScreen(
             }
         }
         if (uiState.hasHistory) {
-            itemsIndexed(uiState.filteredHistoryDays) { index, day ->
+            itemsIndexed(
+                items = uiState.filteredHistoryDays,
+                key = { _, day -> day.epochDay },
+                contentType = { _, _ -> "history_day" }
+            ) { index, day ->
                 HistoryDayCard(
                     index = index + 1,
                     historyDay = day,
@@ -83,7 +87,7 @@ fun TrackerHistoryScreen(
                 )
             }
         } else {
-            item { EmptyEntriesState() }
+            item(key = "empty_history", contentType = "empty_state") { EmptyEntriesState() }
         }
     }
 }
@@ -96,6 +100,9 @@ private fun HistoryDayCard(
     onDeleteEntryClicked: (CalorieEntry) -> Unit
 ) {
     val accent = if (historyDay.netCalories >= 0) Olive else Coral
+    val formattedDate = androidx.compose.runtime.remember(historyDay.epochDay) {
+        LocalDate.ofEpochDay(historyDay.epochDay).format(historyDateFormatter())
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -125,7 +132,7 @@ private fun HistoryDayCard(
                             color = trackerSecondaryTextColor()
                         )
                         Text(
-                            text = LocalDate.ofEpochDay(historyDay.epochDay).format(historyDateFormatter()),
+                            text = formattedDate,
                             style = MaterialTheme.typography.titleLarge,
                             color = trackerPrimaryTextColor()
                         )
@@ -157,11 +164,17 @@ private fun HistoryDayCard(
 
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 historyDay.entries.forEachIndexed { entryIndex, entry ->
+                    val onEdit = androidx.compose.runtime.remember(entry, onEditEntryClicked) {
+                        { onEditEntryClicked(entry) }
+                    }
+                    val onDelete = androidx.compose.runtime.remember(entry, onDeleteEntryClicked) {
+                        { onDeleteEntryClicked(entry) }
+                    }
                     EntryRowCard(
                         entry = entry,
                         index = entryIndex + 1,
-                        onEditEntryClicked = { onEditEntryClicked(entry) },
-                        onDeleteEntryClicked = { onDeleteEntryClicked(entry) }
+                        onEditEntryClicked = onEdit,
+                        onDeleteEntryClicked = onDelete
                     )
                 }
             }
