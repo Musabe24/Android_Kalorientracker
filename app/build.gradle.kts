@@ -20,16 +20,12 @@ val requireReleaseSigning = project.readStringProperty("requireReleaseSigning")?
 
 android {
     namespace = "com.example.kalorientracker"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.kalorientracker"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -37,6 +33,10 @@ android {
     }
 
     signingConfigs {
+        getByName("debug") {
+            enableV1Signing = true
+            enableV2Signing = true
+        }
         if (hasCompleteReleaseSigning) {
             create("release") {
                 storeFile = file(releaseSigningProperties.getValue("releaseKeystoreFile")!!)
@@ -50,6 +50,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
