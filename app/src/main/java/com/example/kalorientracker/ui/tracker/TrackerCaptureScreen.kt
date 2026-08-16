@@ -96,16 +96,26 @@ fun TrackerCaptureScreen(
             )
         }
         if (uiState.hasEntries) {
-            itemsIndexed(uiState.entries) { index, entry ->
+            itemsIndexed(
+                items = uiState.entries,
+                key = { _, entry -> entry.id },
+                contentType = { _, _ -> "entry_row" }
+            ) { index, entry ->
+                val onEdit = androidx.compose.runtime.remember(entry.id, onEditEntryClicked) {
+                    { onEditEntryClicked(entry) }
+                }
+                val onDelete = androidx.compose.runtime.remember(entry.id, onDeleteEntryClicked) {
+                    { onDeleteEntryClicked(entry) }
+                }
                 EntryRowCard(
                     entry = entry,
                     index = index + 1,
-                    onEditEntryClicked = { onEditEntryClicked(entry) },
-                    onDeleteEntryClicked = { onDeleteEntryClicked(entry) }
+                    onEditEntryClicked = onEdit,
+                    onDeleteEntryClicked = onDelete
                 )
             }
         } else {
-            item {
+            item(key = "empty_capture_entries", contentType = "empty_state") {
                 EmptyEntriesState(
                     title = stringResource(R.string.capture_empty_title),
                     message = stringResource(R.string.capture_empty_message)

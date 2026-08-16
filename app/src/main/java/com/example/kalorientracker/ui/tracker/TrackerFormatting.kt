@@ -91,28 +91,38 @@ internal fun averageEntryCalories(uiState: TrackerUiState): Int {
     return if (uiState.entries.isEmpty()) 0 else uiState.entries.sumOf { it.amount } / uiState.entries.size
 }
 
-internal fun historyDateFormatter(): DateTimeFormatter {
-    return DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.getDefault())
+private val cachedHistoryDateFormatter: DateTimeFormatter by lazy {
+    DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.getDefault())
 }
 
-internal fun entryDateFormatter(): DateTimeFormatter {
-    return DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
+private val cachedEntryDateFormatter: DateTimeFormatter by lazy {
+    DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
 }
 
-internal fun weekDayFormatter(): DateTimeFormatter {
-    return DateTimeFormatter.ofPattern("EEE", Locale.getDefault())
+private val cachedWeekDayFormatter: DateTimeFormatter by lazy {
+    DateTimeFormatter.ofPattern("EEE", Locale.getDefault())
 }
 
-internal fun compactTrendDayFormatter(): DateTimeFormatter {
-    return DateTimeFormatter.ofPattern("MM/dd", Locale.getDefault())
+private val cachedCompactTrendDayFormatter: DateTimeFormatter by lazy {
+    DateTimeFormatter.ofPattern("MM/dd", Locale.getDefault())
 }
 
-internal fun trendWindowFormatter(): DateTimeFormatter {
-    return DateTimeFormatter.ofPattern("MMM d", Locale.getDefault())
+private val cachedTrendWindowFormatter: DateTimeFormatter by lazy {
+    DateTimeFormatter.ofPattern("MMM d", Locale.getDefault())
 }
+
+internal fun historyDateFormatter(): DateTimeFormatter = cachedHistoryDateFormatter
+
+internal fun entryDateFormatter(): DateTimeFormatter = cachedEntryDateFormatter
+
+internal fun weekDayFormatter(): DateTimeFormatter = cachedWeekDayFormatter
+
+internal fun compactTrendDayFormatter(): DateTimeFormatter = cachedCompactTrendDayFormatter
+
+internal fun trendWindowFormatter(): DateTimeFormatter = cachedTrendWindowFormatter
 
 internal fun trendWindowLabel(startEpochDay: Long, endEpochDay: Long): String {
-    val formatter = trendWindowFormatter()
+    val formatter = cachedTrendWindowFormatter
     val start = LocalDate.ofEpochDay(startEpochDay).format(formatter)
     val end = LocalDate.ofEpochDay(endEpochDay).format(formatter)
     return "$start - $end"
